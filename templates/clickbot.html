@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Power Scanner - Click Bot</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-card-alt: #172133;
+  --bg-input: #0f172a;
+  --border: #334155;
+  --border-hover: #475569;
+  --border-active: rgba(59,130,246,0.4);
+  --text: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --accent: #3b82f6;
+  --accent-bright: #60a5fa;
+  --accent-glow: rgba(59,130,246,0.15);
+  --green: #34d399;
+  --green-glow: rgba(52,211,153,0.12);
+  --red: #f87171;
+  --red-glow: rgba(248,113,113,0.12);
+  --yellow: #fbbf24;
+  --yellow-glow: rgba(251,191,36,0.12);
+  --cyan: #22d3ee;
+  --cyan-glow: rgba(34,211,238,0.1);
+}
+
+/* Light theme removed - scanner dark theme only */
+
+/* Theme toggle removed */
+
+.clickbot-app * { margin:0; padding:0; box-sizing:border-box; }
+
+.clickbot-app {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: calc(100vh - 64px);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Background effects removed - using scanner theme */
+
+/* ==================== LAYOUT ==================== */
+.clickbot-app .app {
+  position: relative; z-index: 1;
+  max-width: 1440px; margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  min-height: calc(100vh - 64px);
+  transition: grid-template-columns 0.3s ease;
+}
+.clickbot-app .app.sidebar-collapsed {
+  grid-template-columns: 0px 1fr;
+}
+.clickbot-app .app.sidebar-collapsed .cb-sidebar {
+  opacity: 0; pointer-events: none; overflow: hidden; width: 0; min-width: 0; padding: 0; margin: 0;
+}
+.clickbot-app .sidebar-toggle {
+  position: fixed; left: 16px; top: 50%; transform: translateY(-50%);
+  z-index: 100; width: 28px; height: 48px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 0 8px 8px 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-dim); font-size: 14px;
+  transition: all 0.3s; opacity: 0.7;
+}
+.clickbot-app .sidebar-toggle:hover { opacity: 1; border-color: var(--border-hover); }
+.clickbot-app .app.sidebar-collapsed .sidebar-toggle { left: 0px; }
+
+/* ==================== HEADER ==================== */
+.clickbot-app .cb-header {
+  grid-column: 1 / -1;
+  display: none;
+}
+
+.clickbot-app .logo {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.clickbot-app .logo-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent) 0%, #6366f1 50%, #8b5cf6 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800; color: #fff;
+  box-shadow: 0 0 20px rgba(99,102,241,0.3);
+}
+
+.clickbot-app .logo-text h1 {
+  font-size: 16px; font-weight: 700; letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #fff 0%, var(--accent-bright) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.clickbot-app .logo-text span { font-size: 12px; color: var(--text-dim); font-weight: 400; }
+
+.clickbot-app .header-status {
+  display: flex; align-items: center; gap: 16px;
+}
+
+.clickbot-app .status-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  font-size: 13px; color: var(--text-secondary);
+}
+
+.clickbot-app .status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-dim);
+  transition: all 0.3s;
+}
+.clickbot-app .status-dot.running { background: var(--green); box-shadow: 0 0 8px var(--green); animation: cb-pulse 2s infinite; }
+.clickbot-app .status-dot.paused { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+.clickbot-app .status-dot.stopped { background: var(--red); }
+
+@keyframes cb-pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+/* Stats bar */
+.clickbot-app .stats-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+
+.clickbot-app .stat-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 8px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  font-size: 13px; color: #94a3b8;
+}
+.clickbot-app .stat-chip strong { color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+
+/* Current bar */
+.clickbot-app .current-bar {
+  display: none; grid-column: 1 / -1;
+  padding: 10px 20px; border-radius: 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  font-size: 13px; color: #94a3b8;
+  align-items: center; gap: 16px;
+}
+.clickbot-app .current-bar strong { color: var(--accent-bright); font-weight: 600; }
+
+/* ==================== SIDEBAR ==================== */
+.clickbot-app .cb-sidebar {
+  display: flex; flex-direction: column; gap: 12px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.clickbot-app .cb-sidebar::-webkit-scrollbar { width: 4px; }
+.clickbot-app .cb-sidebar::-webkit-scrollbar-track { background: transparent; }
+.clickbot-app .cb-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+
+/* ==================== CARDS ==================== */
+.clickbot-app .card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 18px;
+  transition: border-color 0.2s;
+}
+.clickbot-app .card:hover { border-color: var(--border-hover); }
+
+.clickbot-app .card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+
+.clickbot-app .card-title {
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; color: #94a3b8;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* Loading dots animation */
+.clickbot-app .loading-dots span {
+  opacity: 0; font-weight: 900; font-size: 14px;
+  animation: cb-dotPulse 1.4s infinite;
+}
+.clickbot-app .loading-dots span:nth-child(1) { animation-delay: 0s; }
+.clickbot-app .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.clickbot-app .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes cb-dotPulse {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+}
+
+/* Click cursor animation */
+.clickbot-app .click-cursor {
+  display: inline-flex; animation: cb-cursorClick 1.5s infinite;
+}
+@keyframes cb-cursorClick {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(0.85); opacity: 1; }
+}
+
+.clickbot-app .badge {
+  padding: 3px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+}
+.clickbot-app .badge-success { background: var(--green-glow); color: var(--green); }
+.clickbot-app .badge-failed { background: var(--red-glow); color: var(--red); }
+.clickbot-app .badge-captcha { background: var(--yellow-glow); color: var(--yellow); }
+.clickbot-app .badge-dim { background: rgba(255,255,255,0.04); color: var(--text-dim); }
+.clickbot-app .badge-active { background: var(--green-glow); color: var(--green); }
+
+/* ==================== FORM ELEMENTS ==================== */
+.clickbot-app label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.clickbot-app input, .clickbot-app select, .clickbot-app textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  outline: none;
+}
+.clickbot-app input:focus, .clickbot-app select:focus, .clickbot-app textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: none;
+}
+.clickbot-app input:disabled, .clickbot-app select:disabled { opacity: 0.5; cursor: not-allowed; }
+.clickbot-app input.locked, .clickbot-app select.locked { opacity: 0.7; }
+.clickbot-app input::placeholder { color: var(--text-dim); }
+.clickbot-app textarea { resize: vertical; min-height: 80px; font-size: 13px; line-height: 1.5; }
+.clickbot-app select { cursor: pointer; height: 38px; box-sizing: border-box; }
+.clickbot-app select option { background: #1e293b; color: #e2e8f0; }
+
+.clickbot-app .form-group { margin-bottom: 10px; }
+.clickbot-app .form-row { display: flex; gap: 8px; }
+.clickbot-app .form-row .form-group { flex: 1; }
+
+/* Lock toggle */
+.clickbot-app .lock-toggle {
+  cursor: pointer; font-size: 12px; opacity: 0.6;
+  transition: all 0.2s; user-select: none;
+}
+.clickbot-app .lock-toggle:hover { opacity: 1; transform: scale(1.1); }
+
+/* Settings inputs with lock */
+.clickbot-app .setting-input-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.clickbot-app .setting-input-wrap input {
+  padding-right: 36px;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; text-align: center;
+}
+.clickbot-app .setting-input-wrap .lock-icon {
+  position: absolute; right: 10px;
+  cursor: pointer; font-size: 13px; opacity: 0.5;
+  transition: all 0.15s;
+}
+.clickbot-app .setting-input-wrap .lock-icon:hover { opacity: 1; transform: scale(1.15); }
+.clickbot-app .setting-input-wrap.unsafe input { border-color: var(--red); }
+.clickbot-app .setting-input-wrap.unsafe .lock-icon { right: 32px; }
+.clickbot-app .warn-icon {
+  display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--red); color: #fff;
+  font-size: 11px; font-weight: 700;
+  text-align: center; line-height: 18px;
+}
+.clickbot-app .setting-input-wrap.unsafe .warn-icon { display: block; }
+
+/* ==================== BUTTONS ==================== */
+.clickbot-app .btn {
+  position: relative; overflow: hidden;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #000;
+  color: #fff;
+  font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: all 0.3s ease;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.clickbot-app .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+.clickbot-app .btn:active { transform: translateY(0); }
+.clickbot-app .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+.clickbot-app .btn:disabled:hover { transform: none; box-shadow: none; }
+
+.clickbot-app .btn-primary {
+  background: #000; color: #fff;
+}
+.clickbot-app .btn-primary:hover { background: #111; }
+
+.clickbot-app .btn-danger {
+  background: #000; color: #fff;
+}
+
+.clickbot-app .btn-warning {
+  background: #000; color: #fff;
+}
+
+/* Click Bot action buttons */
+.clickbot-app .cb-action-btn {
+  flex: 1;
+  padding: 12px;
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+.clickbot-app .cb-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.clickbot-app .cb-action-btn.active-glow {
+  background: #000;
+  color: #fff;
+  border: 2px solid transparent;
+  background-image: linear-gradient(#000, #000), linear-gradient(var(--border-angle, 0deg), #fff 0%, transparent 40%, transparent 60%, transparent 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  animation: cb-snake 2s linear infinite;
+}
+@keyframes cb-snake {
+  0% { --border-angle: 0deg; }
+  100% { --border-angle: 360deg; }
+}
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.clickbot-app .btn-success {
+  background: #000; color: #fff; font-weight: 700;
+}
+
+.clickbot-app .btn-ghost { border-color: transparent; background: transparent; }
+.clickbot-app .btn-ghost:hover { border-color: var(--border); background: rgba(255,255,255,0.03); }
+
+.clickbot-app .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+/* Spinning light for active button */
+@keyframes cb-borderSpin { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+.clickbot-app .btn.btn-active { border-color: transparent; color: #fff; }
+.clickbot-app .btn.btn-active::before {
+  content: ''; position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 15%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0.05) 85%, transparent 100%);
+  background-size: 200% 100%;
+  animation: cb-borderSpin 2s linear infinite;
+  z-index: -2;
+}
+.clickbot-app .btn.btn-active::after {
+  content: ''; position: absolute;
+  top: 1px; left: 1px; right: 1px; bottom: 1px;
+  border-radius: 7px;
+  background: var(--bg-primary);
+  z-index: -1;
+}
+
+.clickbot-app .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ==================== TAGS ==================== */
+.clickbot-app .tag-container {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  padding: 8px; border-radius: 8px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  min-height: 36px;
+  max-height: 100px; overflow-y: auto;
+}
+.clickbot-app .tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 5px;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.3);
+  font-size: 11px; color: #93c5fd; font-weight: 500;
+}
+.clickbot-app .tag.district { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.2); color: var(--cyan); }
+.clickbot-app .tag-remove { cursor: pointer; opacity: 0.5; font-size: 10px; margin-left: 2px; }
+.clickbot-app .tag-remove:hover { opacity: 1; }
+
+.clickbot-app .selected-count { font-size: 12px; color: var(--text-dim); margin-top: 6px; text-align: right; }
+
+/* ==================== LOG CONSOLE ==================== */
+.clickbot-app .log-console {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 10px;
+  height: 280px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  position: relative;
+}
+.clickbot-app .log-console .log-entry { position: relative; z-index: 2; }
+.clickbot-app .bot-bg-layer {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  overflow: hidden; border-radius: 10px; opacity: 0.07;
+}
+.clickbot-app .log-console::-webkit-scrollbar { width: 4px; }
+.clickbot-app .log-console::-webkit-scrollbar-track { background: transparent; }
+.clickbot-app .log-console::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+
+.clickbot-app .log-entry { padding: 2px 6px; border-radius: 3px; color: var(--text-dim); }
+.clickbot-app .log-entry.info { color: var(--text-secondary); }
+.clickbot-app .log-entry.success { color: var(--green); }
+.clickbot-app .log-entry.error { color: var(--red); }
+.clickbot-app .log-entry.warning { color: var(--yellow); }
+
+/* ==================== TABLE ==================== */
+.clickbot-app .table-wrap {
+  overflow-x: auto; border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.clickbot-app table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.clickbot-app thead { background: rgba(255,255,255,0.03); }
+.clickbot-app th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #334155; background: #1e293b; }
+.clickbot-app td { padding: 10px 16px; border-bottom: 1px solid #1e293b; color: #cbd5e1; font-size: 13px; }
+.clickbot-app tr:hover td { background: rgba(59,130,246,0.05); }
+.clickbot-app .empty-state { color: #475569; text-align: center; padding: 40px !important; font-size: 13px; }
+
+/* ==================== SECTION DIVIDER ==================== */
+.clickbot-app .divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--border) 50%, transparent 100%);
+  margin: 14px 0;
+}
+
+/* ==================== SETTINGS GRID ==================== */
+.clickbot-app .settings-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+
+/* ==================== SCHEDULER ==================== */
+.clickbot-app .scheduler-panel { transition: opacity 0.3s; }
+
+/* ==================== CHECKBOX ==================== */
+.clickbot-app .checkbox-wrap {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; cursor: pointer;
+}
+.clickbot-app .checkbox-wrap input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Day pills */
+.clickbot-app .day-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+.clickbot-app .day-pill { display: flex; align-items: center; gap: 4px; }
+.clickbot-app .day-pill input { width: 14px; height: 14px; }
+.clickbot-app .day-pill label { font-size: 13px; cursor: pointer; }
+
+/* ==================== MODAL ==================== */
+.clickbot-app .modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  display: none; place-items: center;
+}
+.clickbot-app .modal-overlay.active { display: grid; }
+.clickbot-app .modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 480px; width: 90%;
+  backdrop-filter: blur(20px);
+}
+.clickbot-app .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--red); }
+.clickbot-app .modal p { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.6; }
+.clickbot-app .risk-list { margin: 10px 0 16px 20px; font-size: 12px; color: var(--text-dim); line-height: 1.8; }
+.clickbot-app .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+/* ==================== ROCKET ANIMATION ==================== */
+.clickbot-app .rocket-container {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 9999; overflow: hidden;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 900px) {
+  .clickbot-app .app { grid-template-columns: 1fr; }
+  .clickbot-app .cb-sidebar { max-height: none; }
+}
+
+/* ==================== SCROLLBAR ==================== */
+.clickbot-app ::-webkit-scrollbar { width: 6px; }
+.clickbot-app ::-webkit-scrollbar-track { background: transparent; }
+.clickbot-app ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 4px; }
+
+/* Hidden input */
+.clickbot-app input[type="hidden"] { display: none; }
+</style>
+</head>
+<body>
+
+{% include 'header.html' %}
+
+<div class="clickbot-app">
+
+<div class="app">
+  <!-- HEADER -->
+  <header class="cb-header">
+    <div class="logo">
+      <img src="/static/logo.png" alt="Logo" style="width:40px;height:40px;border-radius:12px;box-shadow:0 0 20px rgba(99,102,241,0.3);">
+      <div class="logo-text">
+        <h1>Google Ads Click Bot</h1>
+        <span>v1.0 &middot; AI-Powered Ad Scanner</span>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="stats-row">
+        <div class="stat-chip">Arama <strong id="statSearches">0</strong></div>
+        <div class="stat-chip">Reklam <strong id="statAdsFound">0</strong></div>
+        <div class="stat-chip">Tıklama <strong id="statSuccessClicks">0</strong></div>
+        <div class="stat-chip">Başarısız <strong id="statFailedClicks">0</strong></div>
+        <div class="stat-chip">Captcha <strong id="statCaptcha">0</strong></div>
+        <div class="stat-chip">Toplam <strong id="statTotalClicks">0</strong></div>
+      </div>
+      <div class="status-chip">
+        <span class="status-dot idle" id="statusDot"></span>
+        <span id="statusText">Bekliyor</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CURRENT BAR -->
+  <div class="current-bar" id="currentBar">
+    <span>Taranıyor &rarr;</span>
+    <span>Şehir: <strong id="curCity">-</strong></span>
+    <span>Kelime: <strong id="curKeyword">-</strong></span>
+  </div>
+
+  <!-- SIDEBAR TOGGLE -->
+  <div class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle" title="Sidebar Aç/Kapa">&#9664;</div>
+
+  <!-- SIDEBAR -->
+  <aside class="cb-sidebar" id="sidebarEl">
+
+    <!-- City Selection -->
+    <div class="card">
+      <div class="card-header" style="cursor:pointer;" onclick="toggleCollapse('cityBody', this)">
+        <span class="card-title">ŞEHİR SEÇİMİ</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="cityBadge" class="badge badge-failed">SEÇİLMEDİ</span>
+          <span class="collapse-arrow" style="font-size:10px;color:var(--text-dim);transition:transform 0.2s;transform:rotate(180deg);">&#9660;</span>
+        </div>
+      </div>
+      <div id="cityBody">
+      <div class="form-row" style="align-items:flex-end;">
+        <div class="form-group" style="flex:1;">
+          <label>İl</label>
+          <select id="selectCity" onchange="onCityChange()">
+            <option value="">Seçim Yapın</option>
+          </select>
+        </div>
+        <div class="form-group" id="districtGroup" style="display:none;flex:1;">
+          <label>İlçe</label>
+          <select id="selectDistrict">
+            <option value="">İlçe Seçin</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:0 0 auto;">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" onclick="addSelectedCity()" style="padding:0 16px;font-size:13px;height:38px;box-sizing:border-box;">Ekle</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="addAllCities()">Tüm İller</button>
+        <button class="btn btn-ghost btn-sm" onclick="addAllDistricts()">Tüm İlçeler</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearSelectedCities()">Temizle</button>
+      </div>
+
+      <div class="tag-container" id="selectedCitiesContainer">
+        <span class="empty-state" style="padding:6px;font-size:13px;">Henüz şehir seçilmedi</span>
+      </div>
+      <div class="selected-count" id="cityCount">0 lokasyon seçili</div>
+
+      </div>
+    </div>
+
+    <!-- Keywords -->
+    <div class="card">
+      <div class="card-header" style="cursor:pointer;" onclick="toggleCollapse('keywordsBody', this)">
+        <span class="card-title">ANAHTAR KELİMELER</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="keywordBadge" class="badge badge-failed">SEÇİLMEDİ</span>
+          <span class="collapse-arrow" style="font-size:10px;color:var(--text-dim);transition:transform 0.2s;transform:rotate(180deg);">&#9660;</span>
+        </div>
+      </div>
+      <div id="keywordsBody">
+      <textarea id="inputKeywords" placeholder="Her satıra bir anahtar kelime girin"></textarea>
+      </div>
+    </div>
+
+    <!-- Tarama Modu -->
+    <div class="card">
+      <div class="card-header" style="cursor:pointer;" onclick="toggleCollapse('scanModeBody', this)">
+        <span class="card-title">TARAMA MODU</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="scanModeBadge" class="badge badge-success">REKLAM</span>
+          <span class="collapse-arrow" style="font-size:10px;color:var(--text-dim);transition:transform 0.2s;">&#9660;</span>
+        </div>
+      </div>
+      <div id="scanModeBody" style="display:none;padding:10px 12px;">
+        <div style="display:flex;gap:6px;">
+          <button class="scan-mode-btn active" data-mode="ads" onclick="selectScanMode('ads')" style="flex:1;padding:8px 0;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">Reklam</button>
+          <button class="scan-mode-btn" data-mode="organic" onclick="selectScanMode('organic')" style="flex:1;padding:8px 0;border:1px solid var(--border);background:var(--bg-input);color:var(--text-dim);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">Organik</button>
+          <button class="scan-mode-btn" data-mode="power" onclick="selectScanMode('power')" style="flex:1;padding:8px 0;border:1px solid var(--border);background:var(--bg-input);color:var(--text-dim);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">Power</button>
+        </div>
+        <input type="hidden" name="scanMode" id="scanModeValue" value="ads">
+      </div>
+    </div>
+
+    <!-- Anti-CAPTCHA & Proxy -->
+    <!-- CAPTCHA & PROXY ayarlari .env dosyasindan okunur -->
+
+    <!-- Scheduler -->
+    <div class="card">
+      <div class="card-header" style="cursor:pointer;" onclick="toggleCollapse('schedulerBody', this)">
+        <span class="card-title">PLANLAMA</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="schedulerBadge" class="badge badge-success">SAATLİK</span>
+          <span class="collapse-arrow" style="font-size:10px;color:var(--text-dim);transition:transform 0.2s;">&#9660;</span>
+        </div>
+      </div>
+      <div id="schedulerBody" style="display:none;">
+      <input type="checkbox" id="scheduleEnabled" checked style="display:none;">
+
+      <div id="schedulerPanel" class="scheduler-panel">
+        <div class="form-group">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <label style="margin:0;">Tekrar Sıklığı</label>
+            <span class="lock-toggle" onclick="toggleSchedulerLock()" id="lockScheduler" style="cursor:pointer;font-size:16px;">&#128275;</span>
+          </div>
+          <select id="scheduleRepeat" onchange="updateScheduleUI();updateSchedulerBadge()">
+            <option value="once">Tek Seferlik</option>
+            <option value="hourly" selected>Saatlik</option>
+            <option value="daily">Günlük</option>
+            <option value="weekly">Haftalık</option>
+            <option value="monthly">Aylık</option>
+          </select>
+        </div>
+
+        <div id="scheduleHourlyOpts" style="display:none;" class="form-group">
+          <label>Kaç saatte bir?</label>
+          <select id="scheduleHourlyInterval">
+            <option value="1">Her 1 saatte</option>
+            <option value="2" selected>Her 2 saatte</option>
+            <option value="3">Her 3 saatte</option>
+            <option value="4">Her 4 saatte</option>
+            <option value="6">Her 6 saatte</option>
+          </select>
+        </div>
+
+        <div id="scheduleDailyOpts" style="display:none;">
+          <div class="form-group">
+            <label>Günde kaç tarama?</label>
+            <select id="scheduleDailyCount" onchange="updateDailySlots()">
+              <option value="1">1 kez</option>
+              <option value="2" selected>2 kez</option>
+              <option value="3">3 kez</option>
+              <option value="4">4 kez</option>
+              <option value="6">6 kez</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tarama Saatleri (otomatik)</label>
+            <div id="dailySlotsDisplay" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+          </div>
+        </div>
+
+        <div id="scheduleWeeklyOpts" style="display:none;">
+          <div class="form-group">
+            <label>Günler</label>
+            <div class="day-pills">
+              <label class="day-pill"><input type="checkbox" value="1" checked> Pzt</label>
+              <label class="day-pill"><input type="checkbox" value="2" checked> Sal</label>
+              <label class="day-pill"><input type="checkbox" value="3" checked> Car</label>
+              <label class="day-pill"><input type="checkbox" value="4" checked> Per</label>
+              <label class="day-pill"><input type="checkbox" value="5" checked> Cum</label>
+              <label class="day-pill"><input type="checkbox" value="6"> Cmt</label>
+              <label class="day-pill"><input type="checkbox" value="0"> Paz</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Günde kaç tarama?</label>
+            <select id="scheduleWeeklyDailyCount" onchange="updateDailySlots()">
+              <option value="1">1 kez</option>
+              <option value="2" selected>2 kez</option>
+              <option value="3">3 kez</option>
+              <option value="4">4 kez</option>
+              <option value="6">6 kez</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tarama Saatleri (otomatik)</label>
+            <div id="weeklySlotsDisplay" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+          </div>
+        </div>
+
+        <div id="scheduleMonthlyOpts" style="display:none;">
+          <div class="form-group">
+            <label>Ayın kaçıncı günü?</label>
+            <select id="scheduleMonthDay">
+              <script>for(let i=1;i<=28;i++) document.write(`<option value="${i}">${i}</option>`);</script>
+            </select>
+          </div>
+        </div>
+
+        <div id="scheduleTimeRange">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Başlama</label>
+              <select id="scheduleStart" onchange="updateDailySlots()">
+                <script>for(let i=0;i<24;i++){const t=String(i).padStart(2,'0')+':00';document.write(`<option value="${i}"${i===1?' selected':''}>${t}</option>`);}</script>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Bitiş</label>
+              <select id="scheduleEnd" onchange="updateDailySlots()">
+                <script>for(let i=0;i<24;i++){const t=String(i).padStart(2,'0')+':00';document.write(`<option value="${i}"${i===0?' selected':''}>${t}</option>`);}</script>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="scheduleStatus" style="padding:8px 12px;border-radius:8px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.1);font-size:13px;color:var(--text-dim);text-align:center;">
+          Kilidi açarak planlamayı aktifleştirin.
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="position:sticky;bottom:0;z-index:10;padding:16px 0 0 0;">
+      <div style="display:flex;gap:8px;">
+        <button class="cb-action-btn" id="btnStart" onclick="startBot()">Başlat</button>
+        <button class="cb-action-btn" id="btnPause" onclick="cbTogglePause()" disabled>Duraklat</button>
+        <button class="cb-action-btn" id="btnStop" onclick="stopBot()" disabled>Durdur</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="cb-main-content" style="display:flex;flex-direction:column;gap:16px;">
+    <!-- Log -->
+    <div class="card" style="flex:0 0 auto;">
+      <div class="card-header">
+        <span class="card-title">CANLI LOG <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></span>
+        <button class="btn btn-ghost btn-sm" onclick="clearLogs()" title="Logu temizle">&#128465; Temizle</button>
+      </div>
+      <div class="log-console" id="logConsole">
+        <div class="bot-bg-layer" id="botBgLayer"></div>
+        <div class="log-entry info">Bot hazır. Şehir ve anahtar kelime girip "Başlat" tuşuna basın.</div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card" style="flex:1;">
+      <div class="card-header">
+        <span class="card-title">TIKLAMA GEÇMİŞİ <span class="click-cursor"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg></span></span>
+        <button class="btn btn-ghost btn-sm" onclick="clearHistory()" title="Geçmişi temizle">&#128465; Temizle</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>SAAT</th>
+              <th>İL</th>
+              <th>İLÇE</th>
+              <th>KELİME</th>
+              <th>FİRMA</th>
+              <th>REKLAM ALANI</th>
+              <th>URL</th>
+              <th>DURUM</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="8" class="empty-state">Henüz tıklama yok.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+</div><!-- end .clickbot-app -->
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+// ==================== TURKEY CITIES & DISTRICTS ====================
+const TURKEY = {
+"Adana":["Seyhan","Çukurova","Yüreğir","Sarıçam","Aladağ","Ceyhan","Feke","İmamoğlu","Karaisalı","Karataş","Kozan","Pozantı","Saimbeyli","Tufanbeyli","Yumurtalık"],
+"Adıyaman":["Merkez","Besni","Çelikhan","Gerger","Gölbaşı","Kahta","Samsat","Sincik","Tut"],
+"Afyonkarahisar":["Merkez","Başmakçı","Bayat","Bolvadin","Çay","Çobanlar","Dazkırı","Dinar","Emirdağ","Evciler","Hocalar","İhsaniye","İscehisar","Kızılören","Sandıklı","Sinanpaşa","Sultandağı","Şuhut"],
+"Ağrı":["Merkez","Diyadin","Doğubayazıt","Eleşkirt","Hamur","Patnos","Taşlıçay","Tutak"],
+"Aksaray":["Merkez","Ağaçören","Eskil","Gülagaç","Güzelyurt","Ortaköy","Sarıyahşi","Sultanhanı"],
+"Amasya":["Merkez","Göynücek","Gümüşhacıköy","Hamamözü","Merzifon","Suluova","Taşova"],
+"Ankara":["Altındağ","Çankaya","Etimesgut","Keçiören","Mamak","Pursaklar","Sincan","Yenimahalle","Gölbaşı"],
+"Antalya":["Muratpaşa","Konyaaltı","Kepez","Döşemealtı","Aksu","Akseki","Alanya","Demre","Elmalı","Finike","Gazipaşa","Gündoğmuş","İbradı","Kaş","Kemer","Korkuteli","Kumluca","Manavgat","Serik"],
+"Ardahan":["Merkez","Çıldır","Damal","Göle","Hanak","Posof"],
+"Artvin":["Merkez","Ardanuç","Arhavi","Borçka","Hopa","Murgul","Şavşat","Yusufeli"],
+"Aydın":["Efeler","Buharkent","Çine","Didim","Germencik","İncirliova","Karacasu","Karpuzlu","Koçarlı","Köşk","Kuşadası","Kuyucak","Nazilli","Söke","Sultanhisar","Yenipazar"],
+"Balıkesir":["Altıeylül","Karesi","Ayvalık","Balya","Bandırma","Bigadiç","Burhaniye","Dursunbey","Edremit","Altınoluk","Erdek","Gömeç","Gönen","Havran","İvrindi","Kepsut","Manyas","Marmara","Savaştepe","Sındırgı","Susurluk"],
+"Bartın":["Merkez","Amasra","Kurucaşile","Ulus"],
+"Batman":["Merkez","Beşiri","Gercüş","Hasankeyf","Kozluk","Sason"],
+"Bayburt":["Merkez","Aydıntepe","Demirözü"],
+"Bilecik":["Merkez","Bozüyük","Gölpazarı","İnhisar","Osmaneli","Pazaryeri","Söğüt","Yenipazar"],
+"Bingöl":["Merkez","Adaklı","Genç","Karlıova","Kiğı","Solhan","Yayladere","Yedisu"],
+"Bitlis":["Merkez","Adilcevaz","Ahlat","Güroymak","Hizan","Mutki","Tatvan"],
+"Bolu":["Merkez","Dörtdivan","Gerede","Göynük","Kıbrıscık","Mengen","Mudurnu","Seben","Yeniçağa"],
+"Burdur":["Merkez","Ağlasun","Altınyayla","Bucak","Çavdır","Çeltikçi","Gölhisar","Karamanlı","Kemer","Tefenni","Yeşilova"],
+"Bursa":["Osmangazi","Yıldırım","Nilüfer","Gürsu","Kestel","Büyükorhan","Gemlik","Harmancık","İnegöl","İznik","Karacabey","Keles","Mudanya","Mustafakemalpaşa","Orhaneli","Orhangazi","Yenişehir"],
+"Çanakkale":["Merkez","Ayvacık","Bayramiç","Biga","Bozcaada","Çan","Eceabat","Ezine","Gelibolu","Gökçeada","Lapseki","Yenice"],
+"Çankırı":["Merkez","Atkaracalar","Bayramören","Çerkeş","Eldivan","Ilgaz","Kızılırmak","Korgun","Kurşunlu","Orta","Şabanözü","Yapraklı"],
+"Çorum":["Merkez","Alaca","Bayat","Boğazkale","Dodurga","İskilip","Kargı","Laçin","Mecitözü","Oğuzlar","Ortaköy","Osmancık","Sungurlu","Uğurludağ"],
+"Denizli":["Merkezefendi","Pamukkale","Acıpayam","Babadağı","Baklan","Bekilli","Beyağaç","Bozkurt","Buldan","Çal","Çameli","Çardak","Çivril","Güney","Honaz","Kale","Sarayköy","Serinhisar","Tavas"],
+"Diyarbakır":["Bağlar","Kayapınar","Sur","Yenişehir","Bismil","Çermik","Çınar","Çüngüş","Dicle","Eğil","Ergani","Hani","Hazro","Kocaköy","Kulp","Lice","Silvan"],
+"Düzce":["Merkez","Akçakoca","Cumayeri","Çilimli","Gölyaka","Gümüşova","Kaynaşlı","Yığılca"],
+"Edirne":["Merkez","Enez","Havsa","İpsala","Keşan","Lalapaşa","Meriç","Süloğlu","Uzunköprü"],
+"Elazığ":["Merkez","Ağın","Alacakaya","Arıcak","Baskil","Karakoçan","Keban","Kovancılar","Maden","Palu","Sivrice"],
+"Erzincan":["Merkez","Çayırlı","İliç","Kemah","Kemaliye","Otlukbeli","Refahiye","Tercan","Üzümlü"],
+"Erzurum":["Aziziye","Palandöken","Yakutiye","Aşkale","Çat","Hınıs","Horasan","Ilıca","İspir","Karaçoban","Karayazı","Köprüköy","Narman","Oltu","Olur","Pasinler","Pazaryolu","Şenkaya","Tekman","Tortum","Uzundere"],
+"Eskişehir":["Odunpazarı","Tepebaşı","Alpu","Beylikova","Çifteler","Günyüzü","Han","İnönü","Mahmudiye","Mihalgazi","Mihalıççık","Sarıcakaya","Seyitgazi","Sivrihisar"],
+"Gaziantep":["Şahinbey","Şehitkâmil","Araban","İslahiye","Karkamış","Nizip","Nurdağı","Oğuzeli","Yavuzeli"],
+"Giresun":["Merkez","Alucra","Bulancak","Çamoluk","Çanakçı","Dereli","Doğankent","Espiye","Eynesil","Görele","Güce","Keşap","Piraziz","Şebinkarahisar","Tirebolu","Yağlıdere"],
+"Gümüşhane":["Merkez","Kelkit","Köse","Kürtün","Şiran","Torul"],
+"Hakkâri":["Merkez","Çukurca","Şemdinli","Yüksekova"],
+"Hatay":["Antakya","Defne","Altınözü","Belen","Dörtyol","Erzin","Hassa","İskenderun","Kırıkhan","Kumlu","Payas","Reyhanlı","Samandağ","Yayladağı"],
+"Iğdır":["Merkez","Aralık","Karakoyunlu","Tuzluca"],
+"Isparta":["Merkez","Aksu","Atabey","Eğirdir","Gelendost","Gönen","Keçiborlu","Senirkent","Şarkikaraağaç","Sütçüler","Uluborlu","Yalvaç","Yenişarbademli"],
+"İstanbul":["Adalar","Arnavutköy","Ataşehir","Avcılar","Bağcılar","Bahçelievler","Bakırköy","Başakşehir","Bayrampaşa","Beşiktaş","Beykoz","Beylikdüzü","Beyoğlu","Büyükçekmece","Çatalca","Çekmeköy","Esenler","Esenyurt","Eyüpsultan","Fatih","Gaziosmanpaşa","Güngören","Kadıköy","Kağıthane","Kartal","Küçükçekmece","Maltepe","Pendik","Sancaktepe","Sarıyer","Silivri","Sultanbeyli","Sultangazi","Şile","Şişli","Tuzla","Ümraniye","Üsküdar","Zeytinburnu"],
+"İzmir":["Konak","Buca","Karşıyaka","Bornova","Bayraklı","Çiğli","Karabağlar","Gaziemir","Narlıdere","Balçova","Güzelbahçe","Aliağa","Bayındır","Bergama","Beydağ","Çeşme","Dikili","Foça","Karaburun","Kemalpaşa","Kınık","Kiraz","Menderes","Menemen","Ödemiş","Seferihisar","Selçuk","Tire","Torbalı","Urla"],
+"Kahramanmaraş":["Dulkadiroğlu","Onikişubat","Afşin","Andırın","Çağlayancerit","Ekinözü","Elbistan","Göksun","Nurhak","Pazarcık","Türkoğlu"],
+"Karabük":["Merkez","Eflani","Eskipazar","Ovacık","Safranbolu","Yenice"],
+"Karaman":["Merkez","Ayrancı","Başyayla","Ermenek","Kazımkarabekir","Sarıveliler"],
+"Kars":["Merkez","Akyaka","Arpaçay","Digor","Kağızman","Sarıkamış","Selim","Susuz"],
+"Kastamonu":["Merkez","Abana","Ağlı","Araç","Azdavay","Bozkurt","Çatalzeytin","Cide","Daday","Devrekani","Doğanyurt","Hanönü","İhsangazi","İnebolu","Küre","Pınarbaşı","Seydiler","Şenpazar","Taşköprü","Tosya"],
+"Kayseri":["Kocasinan","Melikgazi","Talas","Akkışla","Bünyan","Develi","Felahiye","Hacılar","İncesu","Özvatan","Pınarbaşı","Sarıoğlan","Sarız","Tomarza","Yahyalı","Yeşilhisar"],
+"Kırıkkale":["Merkez","Bahşili","Balışeyhi","Çelebi","Delice","Karakeçili","Keskin","Sulakyurt","Yahşihan"],
+"Kırklareli":["Merkez","Babaeski","Demirköy","Kofçaz","Lüleburgaz","Pehlivanköy","Pınarhisar","Vize"],
+"Kırşehir":["Merkez","Akpınar","Akçakent","Boztepe","Çiçekdağı","Kaman","Mucur"],
+"Kilis":["Merkez","Elbeyli","Musabeyli","Polateli"],
+"Kocaeli":["İzmit","Gebze","Darıca","Çayırova","Dilovası","Başiskele","Kartepe","Derince","Gölcük","Kandıra","Karamürsel","Körfez"],
+"Konya":["Selçuklu","Meram","Karatay","Ahırlı","Akören","Akşehir","Altınekin","Beyşehir","Bozkır","Cihanbeyli","Çumra","Derbent","Derebucak","Doğanhisar","Emirgazi","Ereğli","Güneysinir","Hadim","Halkapınar","Hüyük","Ilgın","Kadınhanı","Karapınar","Kulu","Sarayönü","Seydişehir","Taşkent","Tuzlukçu","Yalıhüyük","Yunak"],
+"Kütahya":["Merkez","Altıntaş","Aslanapa","Çavdarhisar","Domaniç","Dumlupınar","Emet","Gediz","Hisarcık","Pazarlar","Simav","Şaphane","Tavşanlı"],
+"Malatya":["Battalgazi","Yeşilyurt","Akçadağ","Arapgir","Arguvan","Darende","Doğanşehir","Doğanyol","Hekimhan","Kale","Kuluncak","Pütürge","Yazıhan"],
+"Manisa":["Yunusemre","Şehzadeler","Ahmetli","Akhisar","Alaşehir","Demirci","Gölmarmara","Gördes","Kırkağaç","Köprübaşı","Kula","Salihli","Sarıgöl","Saruhanlı","Selendi","Soma","Turgutlu"],
+"Mardin":["Artuklu","Dargeçit","Derik","Kızıltepe","Mazıdağı","Midyat","Nusaybin","Ömerli","Savur","Yeşilli"],
+"Mersin":["Akdeniz","Mezitli","Toroslar","Yenişehir","Anamur","Aydıncık","Bozyazı","Çamlıyayla","Erdemli","Gülnar","Mut","Silifke","Tarsus"],
+"Muğla":["Menteşe","Bodrum","Dalaman","Datça","Fethiye","Kavaklıdere","Köyceğiz","Marmaris","Milas","Ortaca","Seydikemer","Ula","Yatağan"],
+"Muş":["Merkez","Bulanık","Hasköy","Korkut","Malazgirt","Varto"],
+"Nevşehir":["Merkez","Acıgöl","Avanos","Derinkuyu","Gülşehir","Hacıbektaş","Kozaklı","Ürgüp"],
+"Niğde":["Merkez","Altunhisar","Bor","Çamardı","Çiftlik","Ulukışla"],
+"Ordu":["Altınordu","Akkuş","Aybastı","Çamaş","Çatalpınar","Fatsa","Gölköy","Gülyalı","Gürgentepe","İkizce","Kabadüz","Kabataş","Korgan","Kumru","Mesudiye","Perşembe","Ulubey","Ünye"],
+"Osmaniye":["Merkez","Bahçe","Düziçi","Hasanbeyli","Kadirli","Sumbas","Toprakkale"],
+"Rize":["Merkez","Ardeşen","Çamlıhemşin","Çayeli","Derepazarı","Fındıklı","Güneysu","Hemşin","İkizdere","İyidere","Kalkandere","Pazar"],
+"Sakarya":["Adapazarı","Akyazı","Arifiye","Erenler","Ferizli","Geyve","Hendek","Karapürçek","Karasu","Kaynarca","Kocaali","Pamukova","Sapanca","Söğütlü","Taraklı"],
+"Samsun":["Atakum","Canik","İlkadım","Tekkeköy","Alaçam","Asarcık","Ayvacık","Bafra","Çarşamba","Havza","Kavak","Ladik","Salıpazarı","Terme","Vezirköprü","Yakakent"],
+"Şanlıurfa":["Eyyübiye","Haliliye","Karaköprü","Akçakale","Birecik","Bozova","Ceylanpınar","Halfeti","Harran","Hilvan","Siverek","Suruç","Viranşehir"],
+"Siirt":["Merkez","Baykan","Eruh","Kurtalan","Pervari","Şirvan","Tillo"],
+"Sinop":["Merkez","Ayancık","Boyabat","Dikmen","Durağan","Erfelek","Gerze","Saraydüzü","Türkeli"],
+"Sivas":["Merkez","Akıncılar","Altınyayla","Divriği","Doğanşar","Gemerek","Gölova","Gürün","Hafik","İmranlı","Kangal","Koyulhisar","Şarkışla","Suşehri","Ulaş","Yıldızeli","Zara"],
+"Şırnak":["Merkez","Beytüşşebap","Cizre","Güçlükonak","İdil","Silopi","Uludere"],
+"Tekirdağ":["Süleymanpaşa","Çorlu","Çerkezköy","Ergene","Hayrabolu","Kapaklı","Malkara","Marmaraereğlisi","Muratlı","Saray","Şarköy"],
+"Tokat":["Merkez","Almus","Artova","Başçiftlik","Erbaa","Niksar","Pazar","Reşadiye","Sulusaray","Turhal","Yeşilyurt","Zile"],
+"Trabzon":["Ortahisar","Akçaabat","Araklı","Arsin","Beşikdüzü","Çaykara","Dernekpazarı","Düzköy","Hayrat","Köprübaşı","Maçka","Of","Sürmene","Şalpazarı","Tonya","Vakfıkebir","Yomra"],
+"Tunceli":["Merkez","Çemişgezek","Hozat","Mazgirt","Nazımiye","Ovacık","Pertek","Pülümür"],
+"Uşak":["Merkez","Banaz","Eşme","Karahallı","Sivaslı","Ulubey"],
+"Van":["İpekyolu","Tuşba","Edremit","Başkale","Çaldıran","Erciş","Gevaş","Gürpınar","Muradiye","Özalp","Saray"],
+"Yalova":["Merkez","Altınova","Armutlu","Çınarcık","Çiftlikköy","Termal"],
+"Yozgat":["Merkez","Akdağmadeni","Aydıncık","Boğazlıyan","Çayıralan","Çekerek","Kadışehri","Saraykent","Sarıkaya","Sorgun","Yenifakılı","Yerköy"],
+"Zonguldak":["Merkez","Alaplı","Çaycuma","Devrek","Ereğli","Gökçebey","Kilimli","Kozlu"]
+};
+
+// ==================== SELECTED CITIES STATE ====================
+let selectedCities = [];
+
+function renderCityDropdowns() {
+  const sel = document.getElementById('selectCity');
+  Object.keys(TURKEY).sort((a,b) => a.localeCompare(b, 'tr')).forEach(city => {
+    const opt = document.createElement('option');
+    opt.value = city; opt.textContent = city;
+    sel.appendChild(opt);
+  });
+}
+
+function onCityChange() {
+  const city = document.getElementById('selectCity').value;
+  const dGroup = document.getElementById('districtGroup');
+  const dSel = document.getElementById('selectDistrict');
+  dSel.innerHTML = '<option value="">İlçe Seçin</option>';
+  if (city && TURKEY[city]) {
+    dGroup.style.display = '';
+    TURKEY[city].forEach(d => { const opt = document.createElement('option'); opt.value = d; opt.textContent = d; dSel.appendChild(opt); });
+  } else { dGroup.style.display = 'none'; }
+}
+
+function addSelectedCity() {
+  const city = document.getElementById('selectCity').value;
+  const district = document.getElementById('selectDistrict').value;
+  if (!city) return;
+  const label = district ? `${city} ${district}` : city;
+  if (!selectedCities.includes(label)) { selectedCities.push(label); renderSelectedCities(); }
+}
+
+function addAllCities() {
+  Object.keys(TURKEY).sort((a,b) => a.localeCompare(b,'tr')).forEach(city => {
+    if (!selectedCities.includes(city)) selectedCities.push(city);
+  });
+  renderSelectedCities();
+}
+
+function addAllDistricts() {
+  const city = document.getElementById('selectCity').value;
+  if (!city || !TURKEY[city]) return;
+  TURKEY[city].forEach(d => { const label = `${city} ${d}`; if (!selectedCities.includes(label)) selectedCities.push(label); });
+  renderSelectedCities();
+}
+
+function removeCity(idx) { selectedCities.splice(idx, 1); renderSelectedCities(); }
+function clearSelectedCities() { selectedCities = []; renderSelectedCities(); }
+
+function renderSelectedCities() {
+  const container = document.getElementById('selectedCitiesContainer');
+  if (!selectedCities.length) {
+    container.innerHTML = '<span class="empty-state" style="padding:6px;font-size:13px;">Henüz şehir seçilmedi</span>';
+    document.getElementById('cityCount').textContent = '0 lokasyon seçili';
+    return;
+  }
+  container.innerHTML = selectedCities.map((c, i) => {
+    const isDistrict = c.includes(' ');
+    const parts = c.split(' ');
+    const label = isDistrict ? `${esc(parts[0])}, ${esc(parts.slice(1).join(' '))}` : esc(c);
+    return `<span class="tag ${isDistrict ? 'district' : ''}">${label}<span class="tag-remove" onclick="removeCity(${i})">x</span></span>`;
+  }).join('');
+  document.getElementById('cityCount').textContent = `${selectedCities.length} lokasyon seçili`;
+  updateCityBadge();
+}
+
+function updateCityBadge() {
+  const badge = document.getElementById('cityBadge');
+  if (selectedCities.length > 0) {
+    badge.textContent = 'SEÇİLDİ';
+    badge.className = 'badge badge-success';
+  } else {
+    badge.textContent = 'SEÇİLMEDİ';
+    badge.className = 'badge badge-failed';
+  }
+}
+
+function updateKeywordBadge() {
+  const badge = document.getElementById('keywordBadge');
+  const text = document.getElementById('inputKeywords').value.trim();
+  const count = text ? text.split('\n').filter(l => l.trim()).length : 0;
+  if (count > 0) {
+    badge.textContent = 'SEÇİLDİ';
+    badge.className = 'badge badge-success';
+  } else {
+    badge.textContent = 'SEÇİLMEDİ';
+    badge.className = 'badge badge-failed';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('inputKeywords').addEventListener('input', updateKeywordBadge);
+  updateScheduleUI();
+  updateSchedulerBadge();
+  startSchedulerCheck();
+});
+
+// ==================== SOCKET.IO ====================
+const socket = io();
+const logConsole = document.getElementById('logConsole');
+
+socket.on('connect', () => addLog('[Sistem] Dashboard bağlandı.', 'success'));
+socket.on('disconnect', () => addLog('[Sistem] Bağlantı kesildi!', 'error'));
+socket.on('clickbot_log', data => addLog(data.message, data.level));
+socket.on('clickbot_history', data => {
+  if (data && data.entry) {
+    const r = data.entry;
+    const tbody = document.getElementById('historyBody');
+    if (tbody.querySelector('.empty-state')) tbody.innerHTML = '';
+    const statusClass = r.status === 'success' ? 'color:var(--green)' : 'color:var(--red)';
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${(r.timestamp||'').slice(11,19)}</td><td>${r.il||''}</td><td>${r.ilce||''}</td><td>${r.keyword||''}</td><td>${r.ad_title||r.domain||''}</td><td>${r.zone||''}</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis">${r.ad_url||''}</td><td style="${statusClass};font-weight:600">${r.status||''}</td>`;
+    tbody.insertBefore(row, tbody.firstChild);
+  }
+});
+
+socket.on('clickbot_stats', data => {
+  document.getElementById('statSearches').textContent = data.total_searches || 0;
+  document.getElementById('statAdsFound').textContent = data.total_ads_found || 0;
+  document.getElementById('statSuccessClicks').textContent = data.successful_clicks || 0;
+  document.getElementById('statFailedClicks').textContent = data.failed_clicks || 0;
+  document.getElementById('statCaptcha').textContent = data.captcha_count || 0;
+  document.getElementById('statTotalClicks').textContent = data.total_clicks || 0;
+  document.getElementById('statusDot').className = 'status-dot ' + (data.status || 'idle');
+  const labels = { idle:'Bekliyor', running:'Çalışıyor', paused:'Duraklatıldı', stopped:'Durduruldu' };
+  document.getElementById('statusText').textContent = labels[data.status] || data.status;
+  const bar = document.getElementById('currentBar');
+  if (data.current_city || data.current_keyword) {
+    bar.style.display = 'flex';
+    document.getElementById('curCity').textContent = data.current_city || '-';
+    document.getElementById('curKeyword').textContent = data.current_keyword || '-';
+  } else { bar.style.display = 'none'; }
+  cbUpdateButtons(data.status || 'idle');
+  // İlk stats geldi - scheduler artık güvenle karar verebilir
+  if (!_schedulerReady) {
+    _schedulerReady = true;
+    // Sayfa yüklendiğinde bot zaten çalışıyorsa kullanıcıya bildir
+    if (data.status === 'running' || data.status === 'paused') {
+      const st = data.status === 'running' ? 'çalışıyor' : 'duraklatıldı';
+      addLog(`[Sistem] Bot zaten ${st}. Şehir: ${data.current_city || '-'}, Kelime: ${data.current_keyword || '-'}`, 'success');
+      addLog(`[Sistem] Aramalar: ${data.total_searches}, Reklamlar: ${data.total_ads_found}, Tıklamalar: ${data.total_clicks}, CAPTCHA: ${data.captcha_count}`, 'info');
+    }
+  }
+});
+
+function addLog(msg, level) {
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + (level || 'info');
+  div.textContent = msg;
+  logConsole.appendChild(div);
+  logConsole.scrollTop = logConsole.scrollHeight;
+  while (logConsole.children.length > 500) logConsole.removeChild(logConsole.firstChild);
+}
+
+function clearLogs() { logConsole.innerHTML = ''; addLog('Log temizlendi.', 'info'); }
+
+// ==================== SCHEDULER ====================
+let schedulerInterval = null, schedulerActive = true;
+// localStorage'dan geri yükle - sayfa geçişlerinde sıfırlanmasın
+let lastScheduleRun = localStorage.getItem('cb_lastScheduleRun') ? new Date(localStorage.getItem('cb_lastScheduleRun')) : null;
+let dailyRunCount = JSON.parse(localStorage.getItem('cb_dailyRunCount') || '{"date":"","count":0}');
+let _schedulerReady = false; // İlk stats gelene kadar scheduler beklesin
+
+function updateScheduleUI() {
+  const mode = document.getElementById('scheduleRepeat').value;
+  document.getElementById('scheduleHourlyOpts').style.display = mode === 'hourly' ? '' : 'none';
+  document.getElementById('scheduleDailyOpts').style.display = mode === 'daily' ? '' : 'none';
+  document.getElementById('scheduleWeeklyOpts').style.display = mode === 'weekly' ? '' : 'none';
+  document.getElementById('scheduleMonthlyOpts').style.display = mode === 'monthly' ? '' : 'none';
+  document.getElementById('scheduleTimeRange').style.display = mode === 'once' ? 'none' : '';
+  if (mode === 'daily' || mode === 'weekly') updateDailySlots();
+}
+
+function updateDailySlots() {
+  const mode = document.getElementById('scheduleRepeat').value;
+  const startH = parseInt(document.getElementById('scheduleStart').value);
+  const endH = parseInt(document.getElementById('scheduleEnd').value);
+  const countEl = mode === 'weekly' ? document.getElementById('scheduleWeeklyDailyCount') : document.getElementById('scheduleDailyCount');
+  const count = parseInt(countEl.value);
+  const totalHours = endH > startH ? endH - startH : 24 - startH + endH;
+  const interval = Math.max(2, Math.floor(totalHours / count));
+  const slots = [];
+  for (let i = 0; i < count; i++) {
+    const h = (startH + i * interval) % 24;
+    slots.push(String(h).padStart(2, '0') + ':00');
+  }
+  const targetId = mode === 'weekly' ? 'weeklySlotsDisplay' : 'dailySlotsDisplay';
+  const container = document.getElementById(targetId);
+  if (container) {
+    container.innerHTML = slots.map(s =>
+      `<span style="padding:4px 10px;border-radius:6px;background:var(--green-glow);color:var(--green);font-size:13px;font-weight:600;">${s}</span>`
+    ).join('');
+  }
+  window._scheduleSlots = slots;
+  window._scheduleInterval = interval;
+}
+
+function toggleSchedulerLock() {
+  const lockEl = document.getElementById('lockScheduler');
+  const cb = document.getElementById('scheduleEnabled');
+  const fields = document.querySelectorAll('#schedulerPanel select, #schedulerPanel input');
+  if (cb.checked) {
+    cb.checked = false;
+    schedulerActive = false;
+    fields.forEach(f => f.disabled = true);
+    stopSchedulerCheck();
+    addLog('[Planlama] Devre dışı.', 'info');
+    lockEl.innerHTML = '&#128274;';
+  } else {
+    cb.checked = true;
+    schedulerActive = true;
+    lastScheduleRun = null;
+    dailyRunCount = { date: '', count: 0 };
+    localStorage.removeItem('cb_lastScheduleRun');
+    localStorage.setItem('cb_dailyRunCount', JSON.stringify(dailyRunCount));
+    fields.forEach(f => f.disabled = false);
+    startSchedulerCheck();
+    addLog('[Planlama] Aktif.', 'success');
+    lockEl.innerHTML = '&#128275;';
+  }
+  updateSchedulerBadge();
+}
+
+function updateSchedulerBadge() {
+  const badge = document.getElementById('schedulerBadge');
+  const modeLabels = {'once':'TEK SEFERLİK','hourly':'SAATLİK','daily':'GÜNLÜK','weekly':'HAFTALIK','monthly':'AYLIK'};
+  const mode = document.getElementById('scheduleRepeat').value;
+  badge.className = 'badge badge-success';
+  badge.textContent = modeLabels[mode] || mode;
+}
+
+function toggleScheduler() { toggleSchedulerLock(); }
+
+function startSchedulerCheck() { stopSchedulerCheck(); schedulerInterval = setInterval(checkSchedule, 30000); checkSchedule(); }
+function stopSchedulerCheck() { if (schedulerInterval) { clearInterval(schedulerInterval); schedulerInterval = null; } }
+
+function updateScheduleStatus(text, type) {
+  const el = document.getElementById('scheduleStatus');
+  if (type === 'active') { el.style.background = 'rgba(34,197,94,0.08)'; el.style.borderColor = 'rgba(34,197,94,0.2)'; el.style.color = 'var(--green)'; }
+  else if (type === 'waiting') { el.style.background = 'rgba(234,179,8,0.08)'; el.style.borderColor = 'rgba(234,179,8,0.2)'; el.style.color = 'var(--yellow)'; }
+  else { el.style.background = 'rgba(99,102,241,0.06)'; el.style.borderColor = 'rgba(99,102,241,0.12)'; el.style.color = 'var(--text-dim)'; }
+  el.innerHTML = text;
+}
+
+function shouldRunNow() {
+  const now = new Date(), currentHour = now.getHours(), currentMin = now.getMinutes();
+  const startHour = parseInt(document.getElementById('scheduleStart').value);
+  const endHour = parseInt(document.getElementById('scheduleEnd').value);
+  const mode = document.getElementById('scheduleRepeat').value;
+  const today = now.toDateString();
+
+  // Tek seferlik: hemen çalış, saat aralığı yok
+  if (mode === 'once') {
+    if (lastScheduleRun) return { run: false, reason: 'alreadyRan' };
+    return { run: true };
+  }
+
+  // Saat aralığı kontrolü
+  const inTimeRange = endHour > startHour
+    ? (currentHour >= startHour && currentHour < endHour)
+    : (currentHour >= startHour || currentHour < endHour);
+  if (!inTimeRange) return { run: false, reason: 'outOfHours', startHour, endHour };
+
+  // Saatlik: belirli aralıklarla tekrarla
+  if (mode === 'hourly') {
+    const interval = parseInt(document.getElementById('scheduleHourlyInterval').value);
+    if (lastScheduleRun) {
+      const elapsed = (now - lastScheduleRun) / (1000 * 60 * 60);
+      if (elapsed < interval) {
+        const next = new Date(lastScheduleRun.getTime() + interval * 60 * 60 * 1000);
+        return { run: false, reason: 'waiting', next };
+      }
+    }
+    return { run: true };
+  }
+
+  // Haftalık: gün kontrolü
+  if (mode === 'weekly') {
+    const selectedDays = [...document.querySelectorAll('#scheduleWeeklyOpts input:checked')].map(c => parseInt(c.value));
+    if (!selectedDays.includes(now.getDay())) return { run: false, reason: 'wrongDay', selectedDays };
+  }
+
+  // Aylık: gün kontrolü
+  if (mode === 'monthly') {
+    const targetDay = parseInt(document.getElementById('scheduleMonthDay').value);
+    if (now.getDate() !== targetDay) return { run: false, reason: 'wrongDate', targetDay };
+    if (lastScheduleRun && isSameDay(lastScheduleRun, now)) return { run: false, reason: 'alreadyToday' };
+    return { run: true };
+  }
+
+  // Günde kaç kez?
+  const countEl = mode === 'weekly' ? document.getElementById('scheduleWeeklyDailyCount') : document.getElementById('scheduleDailyCount');
+  const maxRuns = parseInt(countEl.value);
+
+  // Günlük sayaç sıfırla
+  if (dailyRunCount.date !== today) dailyRunCount = { date: today, count: 0 };
+
+  // Bugün yeterince çalıştı mı?
+  if (dailyRunCount.count >= maxRuns) return { run: false, reason: 'alreadyToday' };
+
+  // Son çalışmadan beri yeterli süre geçti mi?
+  const interval = window._scheduleInterval || 2;
+  if (lastScheduleRun && isSameDay(lastScheduleRun, now)) {
+    const elapsed = (now - lastScheduleRun) / (1000 * 60 * 60);
+    if (elapsed < interval) {
+      const next = new Date(lastScheduleRun.getTime() + interval * 60 * 60 * 1000);
+      return { run: false, reason: 'waiting', next };
+    }
+  }
+
+  return { run: true };
+}
+
+function isSameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function formatTime(h) { return String(h).padStart(2, '0') + ':00'; }
+const dayNames = ['Paz', 'Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt'];
+
+function checkSchedule() {
+  if (!schedulerActive) return;
+  // İlk stats güncellemesi gelene kadar karar verme - yanlış start/stop engelle
+  if (!_schedulerReady) return;
+  const now = new Date();
+  const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  // Server'dan gelen gerçek durumu kullan (DOM class yerine API'den gelen)
+  const statusDot = document.getElementById('statusDot');
+  const botStatus = statusDot ? statusDot.className.replace('status-dot ', '').trim() : 'idle';
+  const isRunning = botStatus === 'running' || botStatus === 'paused';
+  const mode = document.getElementById('scheduleRepeat').value;
+  const modeLabels = { once:'Tek Sefer', hourly:'Saatlik', daily:'Günlük', weekly:'Haftalık', monthly:'Aylık' };
+  const result = shouldRunNow();
+
+  if (result.run) {
+    if (!isRunning) {
+      dailyRunCount.count++;
+      lastScheduleRun = now;
+      localStorage.setItem('cb_lastScheduleRun', now.toISOString());
+      localStorage.setItem('cb_dailyRunCount', JSON.stringify(dailyRunCount));
+      addLog(`[Planlama] ${modeLabels[mode]} - ${ts} - tarama #${dailyRunCount.count} başlatılıyor...`, 'success');
+      startBot();
+    }
+    updateScheduleStatus(`Tarama #${dailyRunCount.count} aktif (${modeLabels[mode]})`, 'active');
+  } else {
+    if (result.reason === 'outOfHours' && isRunning) {
+      addLog(`[Planlama] ${ts} - saat aralığı dışı, durduruluyor...`, 'warning');
+      stopBot();
+    }
+    let msg = '';
+    if (result.reason === 'outOfHours') msg = `Saat aralığı dışı. Sonraki: <strong>${formatTime(result.startHour)}</strong>`;
+    else if (result.reason === 'alreadyRan') msg = 'Tek seferlik tarama tamamlandı.';
+    else if (result.reason === 'alreadyToday') msg = `Bugünkü taramalar tamamlandı (${dailyRunCount.count} kez). Yarın devam edecek.`;
+    else if (result.reason === 'waiting' && result.next) msg = `Sonraki tarama: <strong>${String(result.next.getHours()).padStart(2,'0')}:${String(result.next.getMinutes()).padStart(2,'0')}</strong>`;
+    else if (result.reason === 'wrongDay') msg = `Bugün tarama günü değil. Günler: <strong>${(result.selectedDays||[]).map(d=>dayNames[d]).join(', ')}</strong>`;
+    else if (result.reason === 'wrongDate') msg = `Ayın <strong>${result.targetDay}.</strong> günü bekleniyor.`;
+    else msg = 'Bekleniyor...';
+    updateScheduleStatus(msg, result.reason === 'outOfHours' ? 'waiting' : 'dim');
+  }
+}
+
+// ==================== API ====================
+async function apiCall(endpoint, method='POST', body=null) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch('/clickbot/api/' + endpoint, opts);
+  return res.json();
+}
+
+function selectScanMode(mode) {
+  const labels = {"ads": "REKLAM", "organic": "ORGANİK", "power": "POWER"};
+  const badge = document.getElementById('scanModeBadge');
+  if (badge) badge.textContent = labels[mode] || mode.toUpperCase();
+  document.getElementById('scanModeValue').value = mode;
+  document.querySelectorAll('.scan-mode-btn').forEach(btn => {
+    if (btn.dataset.mode === mode) {
+      btn.style.background = 'var(--accent)';
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = '#fff';
+      btn.classList.add('active');
+    } else {
+      btn.style.background = 'var(--bg-input)';
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--text-dim)';
+      btn.classList.remove('active');
+    }
+  });
+}
+
+function getSettings() {
+  return {
+    scan_mode: document.getElementById('scanModeValue')?.value || "ads",
+    delay_min: 30,
+    delay_max: 60,
+    click_delay_min: 10,
+    click_delay_max: 25,
+    page_stay_min: 20,
+    page_stay_max: 45,
+    pages_to_scan: 2,
+    headless: true,
+    proxy: "",
+    daily_limit: 100,
+    captcha_pause_threshold: 3,
+    excluded_domains: [],
+    target_domains: [],
+  };
+}
+
+// ==================== FLOATING BOTS BACKGROUND ====================
+function initBotBackground() {
+  const layer = document.getElementById('botBgLayer');
+  if (!layer) return;
+
+  const spiderSVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <!-- Ust bacaklar (pençe yukari) -->
+    <path d="M38 32 L28 12 L18 4" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M62 32 L72 12 L82 4" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Ust-yan bacaklar -->
+    <path d="M34 40 L16 30 L6 24" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M66 40 L84 30 L94 24" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Alt-yan bacaklar -->
+    <path d="M34 55 L16 62 L6 72" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M66 55 L84 62 L94 72" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Alt bacaklar -->
+    <path d="M38 64 L28 80 L22 92" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M62 64 L72 80 L78 92" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Kafa (ust daire) -->
+    <circle cx="50" cy="28" r="10" fill="none" stroke="#333" stroke-width="5"/>
+    <!-- Govde (alt hexagon benzeri) -->
+    <path d="M36 42 L42 34 L58 34 L64 42 L64 60 L58 68 L42 68 L36 60 Z" fill="none" stroke="#333" stroke-width="5" stroke-linejoin="round"/>
+    <!-- Goz - dis halka -->
+    <circle cx="50" cy="52" r="10" fill="none" stroke="#333" stroke-width="4"/>
+    <!-- Goz - ic halka -->
+    <circle cx="50" cy="52" r="5" fill="none" stroke="#333" stroke-width="3"/>
+    <!-- Goz bebegi parlama -->
+    <circle cx="47" cy="49" r="2" fill="#333"/>
+  </svg>`;
+  const botSVGs = [spiderSVG];
+
+  const botCount = 8;
+  const bots = [];
+
+  for (let i = 0; i < botCount; i++) {
+    const bot = document.createElement('div');
+    bot.style.position = 'absolute';
+    const size = 28 + Math.random() * 24;
+    bot.style.width = size + 'px';
+    bot.style.height = size + 'px';
+    bot.innerHTML = botSVGs[Math.floor(Math.random() * botSVGs.length)];
+    bot.style.left = Math.random() * 100 + '%';
+    bot.style.top = Math.random() * 100 + '%';
+    layer.appendChild(bot);
+
+    bots.push({
+      el: bot,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.3,
+      rot: Math.random() * 360,
+      vr: (Math.random() - 0.5) * 0.5,
+    });
+  }
+
+  function animate() {
+    bots.forEach(b => {
+      b.x += b.vx;
+      b.y += b.vy;
+      b.rot += b.vr;
+
+      // Sınırlardan sekme
+      if (b.x < -5 || b.x > 105) b.vx *= -1;
+      if (b.y < -5 || b.y > 105) b.vy *= -1;
+
+      b.el.style.left = b.x + '%';
+      b.el.style.top = b.y + '%';
+      b.el.style.transform = `rotate(${b.rot}deg)`;
+    });
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// Sayfa yüklenince başlat
+document.addEventListener('DOMContentLoaded', initBotBackground);
+
+// ==================== BOMB ANIMATION ====================
+function launchBombs() {
+  const container = document.createElement('div');
+  container.className = 'rocket-container';
+  document.body.appendChild(container);
+  const mainEl = document.querySelector('.cb-main-content');
+  const rect = mainEl.getBoundingClientRect();
+  const rocketCount = 5;
+
+  const rocketSvg = `<svg viewBox="0 0 40 100" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 2 C20 2 8 20 8 45 L8 65 L14 70 L14 60 L26 60 L26 70 L32 65 L32 45 C32 20 20 2 20 2Z" fill="none" stroke="#999" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="20" cy="38" r="5" fill="none" stroke="#999" stroke-width="2"/>
+    <line x1="14" y1="70" x2="12" y2="82" stroke="#bbb" stroke-width="2" stroke-linecap="round"/>
+    <line x1="20" y1="62" x2="20" y2="85" stroke="#bbb" stroke-width="2" stroke-linecap="round"/>
+    <line x1="26" y1="70" x2="28" y2="82" stroke="#bbb" stroke-width="2" stroke-linecap="round"/>
+  </svg>`;
+
+  for (let i = 0; i < rocketCount; i++) {
+    setTimeout(() => {
+      const x = rect.left + Math.random() * rect.width * 0.7 + rect.width * 0.15;
+      const startY = rect.bottom + 20;
+
+      // Roket elementi
+      const rocket = document.createElement('div');
+      rocket.style.cssText = `position:absolute;width:32px;height:80px;left:${x-16}px;top:${startY}px;`;
+      rocket.innerHTML = rocketSvg;
+      container.appendChild(rocket);
+
+      // Duman izi bırak
+      const trail = [];
+      let trailInterval = setInterval(() => {
+        const rRect = rocket.getBoundingClientRect();
+        if (rRect.top < -100) { clearInterval(trailInterval); return; }
+        for (let t = 0; t < 2; t++) {
+          const smoke = document.createElement('div');
+          const sz = 4 + Math.random() * 6;
+          smoke.style.cssText = `position:absolute;left:${rRect.left+16-sz/2+Math.random()*8-4}px;top:${rRect.bottom-10}px;width:${sz}px;height:${sz}px;border-radius:50%;background:rgba(180,180,180,0.3);`;
+          smoke.animate([
+            { transform: 'scale(1)', opacity: 0.4 },
+            { transform: `scale(${2+Math.random()*2}) translateY(${20+Math.random()*30}px)`, opacity: 0 }
+          ], { duration: 600 + Math.random() * 400, easing: 'ease-out', fill: 'forwards' });
+          container.appendChild(smoke);
+          setTimeout(() => smoke.remove(), 1000);
+        }
+      }, 50);
+
+      // Yukarı fırlat
+      const duration = 1200 + Math.random() * 600;
+      const wobble = (Math.random() - 0.5) * 60;
+      rocket.animate([
+        { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+        { transform: `translateY(${-(startY + 150)}px) translateX(${wobble}px) rotate(${wobble > 0 ? 3 : -3}deg)`, opacity: 0.3 }
+      ], { duration, easing: 'ease-in', fill: 'forwards' });
+
+      setTimeout(() => {
+        clearInterval(trailInterval);
+        rocket.remove();
+      }, duration);
+
+    }, i * 500 + Math.random() * 300);
+  }
+  setTimeout(() => container.remove(), 5000);
+}
+
+async function startBot() {
+  if (!selectedCities.length) { addLog('En az bir şehir seçmelisiniz!', 'error'); return; }
+  const keywordsRaw = document.getElementById('inputKeywords').value.trim();
+  if (!keywordsRaw) { addLog('En az bir anahtar kelime girmelisiniz!', 'error'); return; }
+  const keywords = keywordsRaw.split('\n').map(s => s.trim()).filter(Boolean);
+  const settings = getSettings();
+  // Tüm açık akordionları kapat
+  COLLAPSE_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      const computed = window.getComputedStyle(el).display;
+      if (computed !== 'none') {
+        el.style.display = 'none';
+        const card = el.closest('.card');
+        if (card) { const a = card.querySelector('.collapse-arrow'); if (a) a.style.transform = 'rotate(0deg)'; }
+      }
+    }
+  });
+  launchBombs();
+  addLog(`Başlatılıyor: ${selectedCities.length} lokasyon, ${keywords.length} kelime...`, 'info');
+  const res = await apiCall('start', 'POST', { cities: selectedCities, keywords, settings });
+  if (res.error) { addLog('Hata: ' + res.error, 'error'); return; }
+  cbUpdateButtons('running');
+}
+
+function cbUpdateButtons(status) {
+  const startBtn = document.getElementById('btnStart');
+  const pauseBtn = document.getElementById('btnPause');
+  const stopBtn = document.getElementById('btnStop');
+  [startBtn, pauseBtn, stopBtn].forEach(b => b.classList.remove('active-glow'));
+  if (status === 'running') {
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    stopBtn.disabled = false;
+    startBtn.classList.add('active-glow');
+    pauseBtn.textContent = 'Duraklat';
+  } else if (status === 'paused') {
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    stopBtn.disabled = false;
+    pauseBtn.classList.add('active-glow');
+    pauseBtn.textContent = 'Devam Et';
+  } else {
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    stopBtn.disabled = true;
+    pauseBtn.textContent = 'Duraklat';
+  }
+}
+
+function cbTogglePause() {
+  const pauseBtn = document.getElementById('btnPause');
+  if (pauseBtn.textContent === 'Duraklat') {
+    apiCall('pause');
+    pauseBtn.textContent = 'Devam Et';
+  } else {
+    apiCall('resume');
+    pauseBtn.textContent = 'Duraklat';
+  }
+}
+
+async function stopBot() {
+  if (!confirm('Tarama durdurulacak. Emin misiniz?')) return;
+  await apiCall('stop');
+  cbUpdateButtons('idle');
+}
+async function clearHistory() {
+  await apiCall('clear-history');
+  document.getElementById('historyBody').innerHTML = '<tr><td colspan="8" class="empty-state">Henüz tıklama yok.</td></tr>';
+  addLog('Geçmiş temizlendi.', 'info');
+}
+
+// ==================== COLLAPSE ====================
+const COLLAPSE_IDS = ['cityBody','keywordsBody','schedulerBody'];
+function toggleCollapse(bodyId, headerEl) {
+  const body = document.getElementById(bodyId);
+  const isOpening = body.style.display === 'none';
+  if (isOpening) {
+    // Diğer açık panelleri kapat
+    COLLAPSE_IDS.forEach(id => {
+      if (id !== bodyId) {
+        const other = document.getElementById(id);
+        if (other && other.style.display !== 'none') {
+          other.style.display = 'none';
+          const otherCard = other.closest('.card');
+          if (otherCard) { const a = otherCard.querySelector('.collapse-arrow'); if (a) a.style.transform = 'rotate(0deg)'; }
+        }
+      }
+    });
+  }
+  const arrow = headerEl.querySelector('.collapse-arrow');
+  if (isOpening) {
+    body.style.display = '';
+    if (arrow) arrow.style.transform = 'rotate(180deg)';
+  } else {
+    body.style.display = 'none';
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+  }
+}
+
+// ==================== HISTORY ====================
+async function loadHistory() {
+  try {
+    const res = await fetch('/clickbot/api/history');
+    const data = await res.json();
+    const tbody = document.getElementById('historyBody');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Henüz tıklama yok.</td></tr>'; return; }
+    tbody.innerHTML = data.slice().reverse().map(r => {
+      const time = r.timestamp ? r.timestamp.split('T')[1]?.substring(0,8) || r.timestamp : '-';
+      const badgeClass = r.status==='success'?'badge-success':r.status==='captcha'?'badge-captcha':'badge-failed';
+      const statusLabel = r.status==='success'?'Başarılı':r.status==='captcha'?'CAPTCHA':'Başarısız';
+      const firma = r.ad_title || r.title || r.domain || '-';
+      const il = r.il || (r.city ? r.city.split(' ')[0] : '-');
+      const ilce = r.ilce || (r.city && r.city.includes(' ') ? r.city.split(' ').slice(1).join(' ') : '-');
+      const zone = r.zone || '-';
+      const kwType = r.kw_type || '';
+      const kwBadge = kwType === 'TÜREV' ? ' <span style="font-size:9px;background:#ff9800;color:#fff;padding:1px 4px;border-radius:3px;vertical-align:middle;">TÜREV</span>' : '';
+      return `<tr><td>${time}</td><td>${esc(il)}</td><td>${esc(ilce)}</td><td>${esc(r.keyword)}${kwBadge}</td><td title="${esc(r.domain||'')}" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(firma)}</td><td style="font-size:11px;">${esc(zone)}</td><td title="${esc(r.ad_url||'')}"><a href="${esc(r.ad_url||'')}" target="_blank" style="color:var(--accent);text-decoration:none;">${esc((r.ad_url||'').substring(0,40))}</a></td><td><span class="badge ${badgeClass}">${statusLabel}</span></td></tr>`;
+    }).join('');
+  } catch(e) {}
+}
+
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function toggleSidebar() {
+  const app = document.querySelector('.clickbot-app .app');
+  const btn = document.getElementById('sidebarToggle');
+  app.classList.toggle('sidebar-collapsed');
+  btn.innerHTML = app.classList.contains('sidebar-collapsed') ? '&#9654;' : '&#9664;';
+}
+
+// ==================== THEME TOGGLE ====================
+/* Theme toggle removed */
+
+// ==================== INIT ====================
+renderCityDropdowns();
+loadHistory(); // Sadece ilk yüklemede bir kez çek, sonra SocketIO ile güncellenecek
+/* Sheets/Email removed */
+updateSchedulerBadge();
+</script>
+</body>
+</html>

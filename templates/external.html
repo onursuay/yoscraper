@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Scanner - External</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+        .container { max-width: 900px; margin: 32px auto; padding: 0 24px; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+        .card h2 { font-size: 18px; color: #f1f5f9; margin-bottom: 8px; }
+        .card p { font-size: 13px; color: #94a3b8; margin-bottom: 16px; line-height: 1.6; }
+
+        .input-row { display: flex; gap: 12px; }
+        .input-row input { flex: 1; padding: 12px 16px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 14px; outline: none; }
+        .input-row input:focus { border-color: #10b981; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .btn-primary { background: #10b981; color: white; }
+        .btn-primary:hover { background: #059669; }
+        .btn-primary:disabled { background: #475569; cursor: not-allowed; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-outline { background: transparent; border: 1px solid #334155; color: #94a3b8; }
+        .btn-outline:hover { border-color: #10b981; color: #e2e8f0; }
+
+        .sa-email { background: #172133; padding: 10px 14px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .sa-email input { flex: 1; background: transparent; border: none; color: #f1f5f9; font-family: monospace; font-size: 13px; outline: none; cursor: text; }
+        .sa-email button { background: #334155; color: #e2e8f0; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .sa-email button:active { transform: scale(0.92); }
+
+        .status-msg { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-top: 12px; }
+        .status-msg.success { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+        .status-msg.error { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+
+        /* Sheet listesi */
+        .sheet-option { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #172133; border-radius: 8px; margin-bottom: 6px; border: 2px solid #334155; cursor: pointer; transition: all 0.15s; }
+        .sheet-option:hover { border-color: #10b981; }
+        .sheet-option.selected { border-color: #10b981; background: rgba(16,185,129,0.08); }
+        .sheet-option .sheet-info strong { color: #f1f5f9; font-size: 14px; }
+        .sheet-option .sheet-info span { color: #64748b; font-size: 12px; margin-left: 8px; }
+        .sheet-option .sheet-info .headers { color: #475569; font-size: 11px; display: block; margin-top: 2px; }
+        .sheet-radio { width: 18px; height: 18px; accent-color: #10b981; }
+
+        /* Aktif baglanti karti */
+        .active-connection { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .active-connection .conn-info { display: flex; align-items: center; gap: 12px; }
+        .active-connection .conn-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 50% { box-shadow: 0 0 0 8px rgba(16,185,129,0); } }
+        .active-connection .conn-details h3 { font-size: 15px; color: #f1f5f9; margin-bottom: 2px; }
+        .active-connection .conn-details p { font-size: 12px; color: #64748b; margin: 0; }
+
+        .hidden { display: none !important; }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed #334155;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .upload-area:hover, .upload-area.drag-over {
+            border-color: #10b981;
+            background: rgba(16,185,129,0.05);
+        }
+        .upload-area span { color: #94a3b8; font-size: 14px; }
+        .upload-hint { font-size: 12px !important; color: #475569 !important; margin-top: 4px; }
+        .upload-area.has-file { border-color: #10b981; background: rgba(16,185,129,0.08); }
+        .upload-area.has-file span { color: #10b981; }
+
+        .upload-progress { margin-top: 16px; display: flex; align-items: center; gap: 12px; }
+        .upload-progress-bar { flex: 1; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; }
+        .upload-progress-fill { height: 100%; background: #10b981; border-radius: 3px; transition: width 0.3s; width: 0%; }
+        .upload-progress span { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+    </style>
+</head>
+<body>
+
+{% include 'header.html' %}
+
+<div class="container">
+
+    <!-- Aktif baglanti varsa bunu goster -->
+    <div class="card {% if not has_connection %}hidden{% endif %}" id="activeCard">
+        <h2>Aktif Bağlantı</h2>
+        <div class="active-connection">
+            <div class="conn-info">
+                <div class="conn-dot"></div>
+                <div class="conn-details">
+                    <h3 id="activeSheetName">{{ lead_sheet_name or '-' }}</h3>
+                    <p id="activeSheetInfo">Yükleniyor...</p>
+                </div>
+            </div>
+            <button class="btn btn-danger" onclick="disconnectSheet()">Bağlantıyı Kes</button>
+        </div>
+    </div>
+
+    <!-- Baglanti formu -->
+    <div class="card" id="connectCard">
+        <h2>Harici Veri Kaynağı Bağla</h2>
+        <div class="sa-email">
+            <input type="text" readonly value="sheets-writer@chrome-sum-490707-h8.iam.gserviceaccount.com" id="saEmail">
+            <button onclick="copyEmail(this)">Kopyala</button>
+        </div>
+
+        <!-- Adim 1: URL -->
+        <div class="input-row" id="step1">
+            <input type="text" id="sheetUrl" placeholder="Google Sheets URL yapıştırın...">
+            <button class="btn btn-primary" id="fetchBtn" onclick="fetchSheets()">Sheet'leri Getir</button>
+        </div>
+
+        <!-- Adim 2: Sheet secimi -->
+        <div class="hidden" id="step2" style="margin-top:20px;">
+            <p style="font-size:14px; color:#f1f5f9; font-weight:600; margin-bottom:12px;" id="spreadsheetTitle"></p>
+            <div id="sheetList"></div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="btn btn-primary hidden" id="confirmBtn" onclick="confirmConnect()">Seçilen Sheet'i Bağla</button>
+                <button class="btn btn-outline" onclick="resetForm()">İptal</button>
+            </div>
+        </div>
+
+        <div class="status-msg hidden" id="statusMsg"></div>
+    </div>
+
+    <!-- Excel Upload -->
+    <div class="card">
+        <h2>Excel / CSV Dosya Yükle</h2>
+        <p>Excel (.xlsx) veya CSV dosyanızı yükleyin. Veriler otomatik olarak Database'e eklenir.<br>
+        Desteklenen sütunlar: <strong>Firma Adı, E-posta, Telefon, Sektör, Domain, Website, Instagram, Facebook, LinkedIn</strong></p>
+
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()"
+             ondragover="event.preventDefault(); this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="event.preventDefault(); this.classList.remove('drag-over'); handleDrop(event)">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.5" style="margin-bottom:10px;">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 12 15 15"/>
+            </svg>
+            <span id="uploadText">Dosyayı sürükleyin veya tıklayın</span>
+            <span class="upload-hint">.xlsx, .xls, .csv</span>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFile(this)">
+
+        <div class="upload-progress hidden" id="uploadProgress">
+            <div class="upload-progress-bar">
+                <div class="upload-progress-fill" id="uploadFill"></div>
+            </div>
+            <span id="uploadStatus">Yükleniyor...</span>
+        </div>
+
+        <div class="status-msg hidden" id="uploadMsg"></div>
+    </div>
+
+</div>
+
+<script>
+let selectedSheet = null;
+let currentUrl = '';
+
+// Sayfa yuklendiginde mevcut baglanti durumunu kontrol et
+function checkConnection() {
+    fetch('/api/database/connection-status')
+        .then(r => r.json())
+        .then(data => {
+            if (data.connected) {
+                document.getElementById('activeCard').classList.remove('hidden');
+                document.getElementById('activeSheetName').textContent = data.sheet_name;
+                document.getElementById('activeSheetInfo').textContent =
+                    data.spreadsheet_title + ' • ' + data.count + ' kayıt';
+                // Formu gizleme - kullanici isterse yeni baglanti yapabilir
+            } else {
+                document.getElementById('activeCard').classList.add('hidden');
+            }
+        })
+        .catch(() => {});
+}
+
+function copyEmail(btn) {
+    const input = document.getElementById('saEmail');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    btn.textContent = '✓ Kopyalandı!';
+    btn.style.background = '#10b981';
+    btn.style.color = 'white';
+    setTimeout(() => { btn.textContent = 'Kopyala'; btn.style.background = ''; btn.style.color = ''; }, 2000);
+}
+
+function fetchSheets() {
+    const url = document.getElementById('sheetUrl').value.trim();
+    if (!url) { alert('URL girin'); return; }
+
+    const btn = document.getElementById('fetchBtn');
+    btn.disabled = true;
+    btn.textContent = 'Yükleniyor...';
+    hideStatus();
+
+    fetch('/api/database/list-sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.textContent = "Sheet'leri Getir";
+
+        if (data.error) {
+            showStatus(data.error, 'error');
+            return;
+        }
+
+        currentUrl = data.url;
+        selectedSheet = null;
+        document.getElementById('spreadsheetTitle').textContent = data.spreadsheet_title;
+
+        const list = document.getElementById('sheetList');
+        list.innerHTML = data.sheets.map(s => `
+            <label class="sheet-option" onclick="selectSheet('${s.title}', this)">
+                <div class="sheet-info">
+                    <strong>${s.title}</strong>
+                    <span>${s.rows} satır</span>
+                    <span class="headers">${s.headers.slice(0, 6).join(' • ')}</span>
+                </div>
+                <input type="radio" name="sheet" class="sheet-radio" value="${s.title}">
+            </label>
+        `).join('');
+
+        document.getElementById('step2').classList.remove('hidden');
+        document.getElementById('confirmBtn').classList.add('hidden');
+    });
+}
+
+function selectSheet(title, el) {
+    selectedSheet = title;
+    document.querySelectorAll('.sheet-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('confirmBtn').classList.remove('hidden');
+}
+
+function confirmConnect() {
+    if (!selectedSheet || !currentUrl) return;
+
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Bağlanıyor...';
+    hideStatus();
+
+    fetch('/api/database/connect-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: currentUrl, sheet_name: selectedSheet })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.textContent = "Seçilen Sheet'i Bağla";
+
+        if (data.error) {
+            showStatus(data.error, 'error');
+        } else {
+            showStatus('✓ ' + data.message, 'success');
+            checkConnection();
+            // Formu sifirla
+            setTimeout(() => {
+                resetForm();
+                hideStatus();
+            }, 2000);
+        }
+    });
+}
+
+function disconnectSheet() {
+    if (!confirm('Bağlantı kesilecek. Emin misiniz?')) return;
+
+    fetch('/api/database/disconnect', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('activeCard').classList.add('hidden');
+        });
+}
+
+function resetForm() {
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('confirmBtn').classList.add('hidden');
+    selectedSheet = null;
+    currentUrl = '';
+}
+
+function showStatus(msg, type) {
+    const el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + type;
+    el.classList.remove('hidden');
+}
+function hideStatus() {
+    document.getElementById('statusMsg').classList.add('hidden');
+}
+
+// --- Excel Upload ---
+function handleDrop(e) {
+    const file = e.dataTransfer.files[0];
+    if (file) uploadFile(file);
+}
+
+function handleFile(input) {
+    const file = input.files[0];
+    if (file) uploadFile(file);
+}
+
+function uploadFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+        showUploadMsg('Desteklenmeyen format. .xlsx, .xls veya .csv kullanın.', 'error');
+        return;
+    }
+
+    // UI guncelle
+    const area = document.getElementById('uploadArea');
+    area.classList.add('has-file');
+    document.getElementById('uploadText').textContent = file.name;
+
+    const progress = document.getElementById('uploadProgress');
+    progress.classList.remove('hidden');
+    document.getElementById('uploadFill').style.width = '30%';
+    document.getElementById('uploadStatus').textContent = 'Yükleniyor...';
+    hideUploadMsg();
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/api/database/upload-excel', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('uploadFill').style.width = '100%';
+
+        if (data.error) {
+            document.getElementById('uploadStatus').textContent = 'Hata!';
+            showUploadMsg(data.error, 'error');
+        } else {
+            document.getElementById('uploadStatus').textContent = 'Tamamlandı!';
+            showUploadMsg('✓ ' + data.message, 'success');
+        }
+
+        // Reset after delay
+        setTimeout(() => {
+            area.classList.remove('has-file');
+            document.getElementById('uploadText').textContent = 'Dosyayı sürükleyin veya tıklayın';
+            progress.classList.add('hidden');
+            document.getElementById('uploadFill').style.width = '0%';
+            document.getElementById('fileInput').value = '';
+        }, 3000);
+    })
+    .catch(err => {
+        document.getElementById('uploadStatus').textContent = 'Hata!';
+        showUploadMsg('Yükleme hatası: ' + err.message, 'error');
+    });
+}
+
+function showUploadMsg(msg, type) {
+    const el = document.getElementById('uploadMsg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + type;
+    el.classList.remove('hidden');
+}
+function hideUploadMsg() {
+    document.getElementById('uploadMsg').classList.add('hidden');
+}
+
+// Sayfa yuklendiginde
+checkConnection();
+</script>
+
+</body>
+</html>

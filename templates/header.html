@@ -1,0 +1,317 @@
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .ps-header {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        background: linear-gradient(135deg, #1e293b 0%, #162032 100%);
+        border-bottom: 1px solid #334155;
+        padding: 0 32px;
+        display: flex;
+        align-items: center;
+        height: 64px;
+        backdrop-filter: blur(12px);
+    }
+    .ps-logo {
+        font-size: 20px;
+        font-weight: 800;
+        color: #f1f5f9;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        letter-spacing: -0.5px;
+    }
+    .ps-logo svg { width: 26px; height: 26px; }
+    .ps-logo:hover { color: white; }
+
+    .ps-nav { display: flex; gap: 2px; margin-left: auto; }
+    .ps-nav a {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: #94a3b8;
+        text-decoration: none;
+        font-size: 18px;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    .ps-nav a:hover {
+        background: rgba(255,255,255,0.05);
+        color: #e2e8f0;
+    }
+    .ps-nav a.active {
+        background: rgba(59,130,246,0.12);
+        color: #60a5fa;
+        font-weight: 600;
+    }
+    .ps-nav a.active::after {
+        content: '';
+        position: absolute;
+        bottom: -9px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 24px;
+        height: 3px;
+        background: #3b82f6;
+        border-radius: 3px;
+    }
+
+    /* Icon animasyonu - aktif olanda */
+    .ps-nav a svg {
+        width: 16px;
+        height: 16px;
+        transition: transform 0.3s ease;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .ps-nav a.active svg {
+        animation: iconPulse 2s ease-in-out infinite;
+    }
+    @keyframes iconPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+    }
+
+    /* Header animation area */
+    .header-animation {
+        flex: 1;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        margin: 0 16px;
+    }
+    .matrix-col {
+        position: absolute;
+        top: -100%;
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
+        font-size: 14px;
+        line-height: 1.2;
+        color: rgba(255,255,255,0.7);
+        text-shadow: 0 0 8px rgba(255,255,255,0.3);
+        animation: matrixFall linear infinite;
+        pointer-events: none;
+        white-space: pre;
+    }
+    @keyframes matrixFall {
+        0% { transform: translateY(-100%); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 0.6; }
+        100% { transform: translateY(calc(64px + 100%)); opacity: 0; }
+    }
+</style>
+
+<div class="ps-header">
+    <a href="/" class="ps-logo">
+        <img src="/static/logo.png" alt="Power Scanner" style="width:44px; height:44px; border-radius:10px;">
+    </a>
+
+    <!-- Bouncing network nodes -->
+    <div class="header-animation" id="headerAnim"></div>
+
+    <nav class="ps-nav">
+        <a href="/clickbot" id="nav-clickbot">
+            <svg viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
+            Click Bot
+        </a>
+        <a href="/" id="nav-scanner">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Scanner
+        </a>
+        <a href="/external" id="nav-external">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            External
+        </a>
+        <a href="/database" id="nav-database">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            Database
+        </a>
+        <a href="/sendmail" id="nav-sendmail">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Send Mail
+        </a>
+    </nav>
+</div>
+
+<style>
+    .scan-badge {
+        display: none;
+        width: 8px;
+        height: 8px;
+        background: #22c55e;
+        border-radius: 50%;
+        animation: scanPulse 1s ease-in-out infinite;
+        margin-left: 4px;
+    }
+    .scan-badge.active { display: inline-block; }
+    @keyframes scanPulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+        50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    }
+    .scan-status-bar {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #172133;
+        border-top: 1px solid #334155;
+        padding: 8px 32px;
+        font-size: 12px;
+        color: #94a3b8;
+        z-index: 998;
+        align-items: center;
+        gap: 12px;
+    }
+    .scan-status-bar.active { display: flex; }
+    .scan-status-bar .mini-progress {
+        flex: 1;
+        max-width: 200px;
+        height: 4px;
+        background: #334155;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .scan-status-bar .mini-progress-fill {
+        height: 100%;
+        background: #22c55e;
+        border-radius: 2px;
+        transition: width 0.3s;
+    }
+    .scan-status-bar a {
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 600;
+        margin-left: auto;
+    }
+</style>
+
+<!-- Tarama durum cubugu - tum sayfalarda gorunur -->
+<div class="scan-status-bar" id="scanStatusBar">
+    <span class="scan-badge active" style="display:inline-block"></span>
+    <span id="scanBarText">Taranıyor...</span>
+    <div class="mini-progress">
+        <div class="mini-progress-fill" id="scanBarProgress" style="width:0%"></div>
+    </div>
+    <span id="scanBarCount">0/0</span>
+    <a href="/">Scanner'a Git →</a>
+</div>
+
+<script>
+// Aktif sayfayi isaretle
+(function() {
+    const path = location.pathname;
+    const navMap = {
+        '/': 'nav-scanner',
+        '/external': 'nav-external',
+        '/database': 'nav-database',
+        '/domains': 'nav-database',
+        '/sendmail': 'nav-sendmail',
+        '/clickbot': 'nav-clickbot',
+    };
+    const activeId = navMap[path];
+    if (activeId) {
+        document.getElementById(activeId).classList.add('active');
+    }
+})();
+
+// Matrix binary rain
+(function initMatrixRain() {
+    const container = document.getElementById('headerAnim');
+    if (!container) return;
+    const COL_COUNT = 25;
+    const chars = '01';
+
+    function createColumn() {
+        const col = document.createElement('div');
+        col.className = 'matrix-col';
+        const len = 3 + Math.floor(Math.random() * 5);
+        let text = '';
+        for (let i = 0; i < len; i++) {
+            text += chars[Math.floor(Math.random() * chars.length)] + '\n';
+        }
+        col.textContent = text;
+        col.style.left = Math.random() * 100 + '%';
+        col.style.animationDuration = (1.5 + Math.random() * 2.5) + 's';
+        col.style.animationDelay = Math.random() * 3 + 's';
+        col.style.fontSize = (10 + Math.random() * 6) + 'px';
+        col.style.opacity = 0.15 + Math.random() * 0.5;
+        container.appendChild(col);
+        col.addEventListener('animationend', () => {
+            col.remove();
+            createColumn();
+        });
+    }
+
+    for (let i = 0; i < COL_COUNT; i++) {
+        setTimeout(() => createColumn(), i * 150);
+    }
+})();
+
+// Global tarama durumu takibi - tum sayfalarda calisir
+(function globalScanWatch() {
+    const badge = document.querySelector('#nav-scanner .scan-badge') ||
+        (() => { const b = document.createElement('span'); b.className = 'scan-badge'; document.getElementById('nav-scanner').appendChild(b); return b; })();
+    const bar = document.getElementById('scanStatusBar');
+
+    function checkScan() {
+        fetch('/api/status')
+            .then(r => r.json())
+            .then(data => {
+                if (data.running) {
+                    badge.classList.add('active');
+                    // Scanner sayfasinda degilsek alt cubugu goster
+                    if (location.pathname !== '/') {
+                        bar.classList.add('active');
+                        document.getElementById('scanBarText').textContent = data.status.substring(0, 60);
+                        const pct = data.total > 0 ? (data.progress / data.total * 100) : 0;
+                        document.getElementById('scanBarProgress').style.width = pct + '%';
+                        document.getElementById('scanBarCount').textContent = data.results.length + ' bulundu';
+                    } else {
+                        bar.classList.remove('active');
+                    }
+                } else {
+                    badge.classList.remove('active');
+                    bar.classList.remove('active');
+                }
+            })
+            .catch(() => {});
+    }
+
+    // Clickbot sayfasinda Scanner polling gereksiz yavaslatiyor - 5sn'ye cikar
+    const scanInterval = location.pathname === '/clickbot' ? 10000 : 2000;
+    setInterval(checkScan, scanInterval);
+    checkScan();
+})();
+
+// Click Bot tarama durumu takibi
+(function globalClickBotWatch() {
+    const cbBadge = document.querySelector('#nav-clickbot .scan-badge') ||
+        (() => { const b = document.createElement('span'); b.className = 'scan-badge'; document.getElementById('nav-clickbot').appendChild(b); return b; })();
+
+    function checkClickBot() {
+        fetch('/clickbot/api/stats')
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'running' || data.status === 'paused') {
+                    cbBadge.classList.add('active');
+                } else {
+                    cbBadge.classList.remove('active');
+                }
+            })
+            .catch(() => {});
+    }
+
+    // Clickbot sayfasinda SocketIO zaten var, badge icin 5sn yeterli
+    const cbInterval = location.pathname === '/clickbot' ? 10000 : 2000;
+    setInterval(checkClickBot, cbInterval);
+    checkClickBot();
+})();
+</script>

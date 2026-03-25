@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abonelikten &#199;&#305;k&#305;ld&#305;</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f4f4f7; font-family:'Helvetica Neue',Arial,sans-serif; display:flex; justify-content:center; align-items:center; min-height:100vh; }
+  .card { background:#fff; border-radius:16px; padding:48px 40px; max-width:480px; text-align:center; box-shadow:0 4px 24px rgba(0,0,0,0.08); }
+  .icon { font-size:48px; margin-bottom:16px; }
+  h1 { color:#1e293b; font-size:22px; margin-bottom:12px; }
+  p { color:#64748b; font-size:15px; line-height:1.7; margin-bottom:8px; }
+  .email { color:#1e293b; font-weight:700; }
+  .note { color:#94a3b8; font-size:13px; margin-top:20px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">&#9989;</div>
+  <h1>Abonelikten &#199;&#305;k&#305;ld&#305;</h1>
+  {% if email %}
+  <p><span class="email">{{ email }}</span> adresi e-posta listemizden &#231;&#305;kar&#305;ld&#305;.</p>
+  <p>Art&#305;k size pazarlama e-postas&#305; g&#246;ndermeyece&#287;iz.</p>
+  {% else %}
+  <p>E-posta adresiniz listemizden &#231;&#305;kar&#305;ld&#305;.</p>
+  {% endif %}
+  <p class="note">Bu i&#351;lem yanl&#305;&#351;l&#305;kla yap&#305;ld&#305;ysa info@yodijital.com adresine yaz&#305;n.</p>
+</div>
+</body>
+</html>

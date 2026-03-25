@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Scanner - Domainler</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { font-size: 22px; color: #f1f5f9; }
+        .header a { color: #3b82f6; text-decoration: none; font-size: 14px; }
+        .header a:hover { text-decoration: underline; }
+
+        .container { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .toolbar .info { color: #94a3b8; font-size: 14px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-danger:disabled { background: #475569; cursor: not-allowed; }
+        .btn-refresh { background: #3b82f6; color: white; margin-left: 8px; }
+        .btn-refresh:hover { background: #2563eb; }
+        .btn-select { background: #334155; color: #e2e8f0; margin-right: 8px; }
+        .btn-select:hover { background: #475569; }
+
+        .table-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #172133; padding: 12px 16px; text-align: left; font-size: 12px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #334155; }
+        td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid rgba(51,65,85,0.5); color: #cbd5e1; }
+        tr:hover td { background: rgba(59,130,246,0.05); }
+
+        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6; }
+
+        .loading { text-align: center; padding: 40px; color: #64748b; }
+        .search-box { padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 14px; width: 300px; outline: none; }
+        .search-box:focus { border-color: #3b82f6; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Taranan Domainler</h1>
+    <a href="/">← Dashboard'a Dön</a>
+</div>
+
+<div class="container">
+    <div class="toolbar">
+        <div>
+            <button class="btn btn-select" onclick="selectAll()">Tümünü Seç</button>
+            <button class="btn btn-danger" id="deleteBtn" onclick="deleteSelected()" disabled>Seçilenleri Sil</button>
+            <button class="btn btn-refresh" onclick="loadDomains()">Yenile</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+            <input type="text" class="search-box" id="searchBox" placeholder="Ara..." oninput="filterTable()">
+            <span class="info" id="totalInfo">Yükleniyor...</span>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:40px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+                    <th>#</th>
+                    <th>Firma Adı</th>
+                    <th>E-posta</th>
+                    <th>Telefon</th>
+                    <th>Domain</th>
+                </tr>
+            </thead>
+            <tbody id="tbody">
+                <tr><td colspan="6" class="loading">Yükleniyor...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let allDomains = [];
+
+function loadDomains() {
+    fetch('/api/domains')
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { alert(data.error); return; }
+            allDomains = data.domains;
+            document.getElementById('totalInfo').textContent = `Toplam: ${data.total} kayıt`;
+            renderTable(allDomains);
+        });
+}
+
+function renderTable(domains) {
+    const tbody = document.getElementById('tbody');
+    if (!domains.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">Kayıt bulunamadı</td></tr>';
+        return;
+    }
+    tbody.innerHTML = domains.map((d, i) =>
+        `<tr data-row="${d.row}">
+            <td><input type="checkbox" class="row-check" value="${d.row}" onchange="updateDeleteBtn()"></td>
+            <td>${i + 1}</td>
+            <td>${d.name}</td>
+            <td>${d.email}</td>
+            <td>${d.phone || '-'}</td>
+            <td>${d.domain}</td>
+        </tr>`
+    ).join('');
+}
+
+function filterTable() {
+    const q = document.getElementById('searchBox').value.toLowerCase();
+    const filtered = allDomains.filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.email.toLowerCase().includes(q) ||
+        d.domain.toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+}
+
+function toggleAll(el) {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = el.checked);
+    updateDeleteBtn();
+}
+
+function selectAll() {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = true);
+    document.getElementById('checkAll').checked = true;
+    updateDeleteBtn();
+}
+
+function updateDeleteBtn() {
+    const checked = document.querySelectorAll('.row-check:checked').length;
+    const btn = document.getElementById('deleteBtn');
+    btn.disabled = checked === 0;
+    btn.textContent = checked > 0 ? `Seçilenleri Sil (${checked})` : 'Seçilenleri Sil';
+}
+
+function deleteSelected() {
+    const rows = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => parseInt(cb.value));
+    if (!rows.length) return;
+    if (!confirm(`${rows.length} kayıt silinecek. Emin misiniz?`)) return;
+
+    fetch('/api/domains/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: rows })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        alert(data.message);
+        loadDomains();
+    });
+}
+
+// Sayfa yuklendiginde domainleri getir
+loadDomains();
+</script>
+
+</body>
+</html>

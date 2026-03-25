@@ -1,0 +1,14 @@
+credentials/
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+Icon*
+.vercel
+=3.1.0
+=5.3.0
+debug_last_page.html
+unsubscribed.json
+clickbot_config.json
+.DS_Store

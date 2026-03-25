@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Scanner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid #334155;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+        .header .badge {
+            background: #3b82f6;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            min-height: calc(100vh - 64px);
+            transition: grid-template-columns 0.3s ease;
+        }
+        .container.sidebar-closed {
+            grid-template-columns: 56px 1fr;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #1e293b;
+            border-right: 1px solid #334155;
+            padding: 24px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: padding 0.3s ease;
+            position: relative;
+        }
+        .container.sidebar-closed .sidebar {
+            padding: 12px;
+            overflow: hidden;
+        }
+        .container.sidebar-closed .sidebar-content .sector-list,
+        .container.sidebar-closed .sidebar-content .selected-info,
+        .container.sidebar-closed .sidebar-content .form-group,
+        .container.sidebar-closed .sidebar-content .scan-actions {
+            display: none !important;
+        }
+
+        /* Sidebar header row */
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .container.sidebar-closed .sidebar-header {
+            justify-content: center;
+            margin-bottom: 0;
+        }
+        .container.sidebar-closed .sidebar-header h2 {
+            display: none;
+        }
+
+        .sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin: 0;
+        }
+
+        /* Sidebar toggle button */
+        .sidebar-toggle {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            color: #94a3b8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .sidebar-toggle:hover { border-color: #22c55e; color: #22c55e; }
+        .sidebar-toggle.active { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.1); }
+
+        /* Sector Groups */
+        .sector-group {
+            margin-bottom: 4px;
+        }
+        .sector-group-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 4px;
+            padding: 10px 12px;
+            background: #172133;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+        .sector-group-title:hover { background: #1e2d42; }
+        .sector-group-title .arrow { transition: transform 0.2s; margin-left: auto; }
+        .sector-group-title.open .arrow { transform: rotate(90deg); }
+        .sector-group-title .sector-icon {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            opacity: 0.7;
+        }
+        .sector-group-title .sector-label { flex: 1; }
+
+        /* Sidebar kapalıyken ikonlar */
+        .container.sidebar-closed .sector-group-title {
+            justify-content: center;
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .container.sidebar-closed .sector-group-title .sector-label,
+        .container.sidebar-closed .sector-group-title .arrow {
+            display: none;
+        }
+        .container.sidebar-closed .sector-group-title .sector-icon {
+            opacity: 1;
+        }
+        .container.sidebar-closed .sector-group-title {
+            gap: 0;
+        }
+
+        .sector-list {
+            display: none;
+            padding: 4px 0;
+        }
+        .sector-list.open { display: block; }
+
+        .sector-item {
+            padding: 8px 12px;
+            margin: 2px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #cbd5e1;
+            transition: all 0.15s;
+        }
+        .sector-item:hover { background: #334155; color: white; }
+        .sector-item.selected {
+            background: #3b82f6;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* City Select */
+        .form-group {
+            margin-top: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 10px 14px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+            outline: none;
+        }
+        select:focus, input:focus { border-color: #3b82f6; }
+
+        /* Scan Actions */
+        .scan-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 24px;
+        }
+        .scan-actions .ctrl-btn {
+            flex: 1;
+            padding: 12px;
+            background: #000;
+            color: #fff;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+        .scan-actions .ctrl-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .ctrl-btn.active-glow {
+            background: #000;
+            color: #fff;
+            border: 2px solid transparent;
+            background-image: linear-gradient(#000, #000), linear-gradient(var(--border-angle, 0deg), #fff 0%, transparent 40%, transparent 60%, transparent 100%);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            animation: scan-snake 2s linear infinite;
+        }
+        @keyframes scan-snake {
+            0% { --border-angle: 0deg; }
+            100% { --border-angle: 360deg; }
+        }
+        @property --border-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+
+        /* Main Content */
+        .main {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        /* Status Card */
+        .status-card {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .status-text {
+            font-size: 15px;
+            color: #94a3b8;
+        }
+        .status-text.running { color: #fbbf24; }
+        .status-text.done { color: #34d399; }
+        .status-text.error { color: #f87171; }
+
+        .progress-bar {
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 3px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .stat-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: #f1f5f9;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        /* Results Table */
+        .results-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .results-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .results-header h3 { font-size: 16px; color: #f1f5f9; }
+
+        .results-table-wrap {
+            overflow-y: auto;
+            flex: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            position: sticky;
+            top: 0;
+            background: #1e293b;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #64748b;
+            border-bottom: 1px solid #334155;
+        }
+        td {
+            padding: 10px 16px;
+            font-size: 13px;
+            border-bottom: 1px solid #1e293b;
+            color: #cbd5e1;
+        }
+        tr:hover td { background: rgba(59,130,246,0.05); }
+
+        /* Log Panel */
+        .log-panel {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 12px;
+        }
+        .log-line {
+            padding: 2px 0;
+            color: #64748b;
+        }
+        .log-line.found { color: #34d399; }
+        .log-line.error { color: #f87171; }
+        .log-line.skip { color: #fbbf24; }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #334155;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; background: rgba(34,197,94,0.1); } to { opacity: 1; background: transparent; } }
+
+        /* Custom select */
+        .selected-info {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: rgba(59,130,246,0.1);
+            border: 1px solid rgba(59,130,246,0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            color: #93c5fd;
+            display: none;
+        }
+        .selected-info.show { display: block; }
+    </style>
+</head>
+<body>
+
+{% include 'header.html' %}
+
+<div class="container" id="mainContainer">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Sektör Seçin</h2>
+            <button class="sidebar-toggle active" id="sidebarToggle" onclick="toggleSidebar()" title="Sidebar aç/kapat">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <line x1="9" y1="3" x2="9" y2="21"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="sidebar-content">
+            {% for group_name, sectors in sectors.items() %}
+            <div class="sector-group">
+                <div class="sector-group-title" onclick="toggleGroup(this)" title="{{ group_name }}">
+                    <span class="sector-icon">{{ sector_icons.get(group_name, '')|safe }}</span>
+                    <span class="sector-label">{{ group_name }}</span>
+                    <span class="arrow">▶</span>
+                </div>
+                <div class="sector-list">
+                    {% for sector in sectors %}
+                    <div class="sector-item" onclick="selectSector(this, '{{ sector }}')">
+                        {{ sector }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="selected-info" id="selectedInfo"></div>
+
+            <div class="form-group">
+                <label>Şehir</label>
+                <select id="citySelect">
+                    <option value="">Şehir seçin...</option>
+                    {% for city in cities %}
+                    <option value="{{ city }}">{{ city }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Min. Sonuç</label>
+                <input type="number" id="minResults" value="20" min="5" max="100">
+            </div>
+
+            <div class="scan-actions">
+                <button class="ctrl-btn" id="scanBtn" onclick="startScan()">Başlat</button>
+                <button class="ctrl-btn" id="pauseBtn" onclick="pauseScan()" disabled>Duraklat</button>
+                <button class="ctrl-btn" id="stopBtn" onclick="stopScan()" disabled>Durdur</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+        <!-- Status -->
+        <div class="status-card">
+            <div class="status-header">
+                <span class="status-text" id="statusText">Hazır - Sektör ve şehir seçerek başlayın</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Taranan</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statFound" style="color:#34d399">0</div>
+                <div class="stat-label">Bulunan</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statSheets" style="color:#3b82f6">0</div>
+                <div class="stat-label">Sheets'e Eklenen</div>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="results-card">
+            <div class="results-header">
+                <h3>Bulunan İşletmeler</h3>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span id="resultCount" style="color:#64748b; font-size:13px;">0 sonuç</span>
+                    <button onclick="deleteSelectedResults()" id="deleteResultsBtn" style="display:none; padding:5px 12px; background:#ef4444; color:white; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">Seçilenleri Sil</button>
+                    <button onclick="clearResults()" id="clearResultsBtn" style="display:none; padding:5px 12px; background:#334155; color:#94a3b8; border:none; border-radius:6px; font-size:12px; cursor:pointer;">Temizle</button>
+                </div>
+            </div>
+            <div class="results-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:36px"><input type="checkbox" id="checkAllResults" onchange="toggleAllResults(this)"></th>
+                            <th>#</th>
+                            <th>Tarih</th>
+                            <th>Sektör</th>
+                            <th>Firma Adı</th>
+                            <th>Telefon</th>
+                            <th>E-posta</th>
+                            <th>Domain</th>
+                            <th>Instagram</th>
+                            <th>Facebook</th>
+                            <th>LinkedIn</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr><td colspan="11" style="text-align:center; padding:40px; color:#475569;">Henüz tarama yapılmadı</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="log-panel" id="logPanel">
+            <div class="log-line">Sistem hazır. Tarama başlatmak için sol panelden sektör ve şehir seçin.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedSector = '';
+let pollInterval = null;
+
+function toggleSidebar() {
+    const container = document.getElementById('mainContainer');
+    const btn = document.getElementById('sidebarToggle');
+    const isClosed = container.classList.toggle('sidebar-closed');
+    btn.classList.toggle('active', !isClosed);
+    localStorage.setItem('sidebarState', isClosed ? 'closed' : 'open');
+}
+
+(function() {
+    const state = localStorage.getItem('sidebarState');
+    if (state === 'closed') {
+        document.getElementById('mainContainer').classList.add('sidebar-closed');
+        var btn = document.getElementById('sidebarToggle');
+        if (btn) btn.classList.remove('active');
+    }
+})();
+
+function toggleGroup(el) {
+    const isOpen = el.classList.contains('open');
+
+    // Tum acik gruplari kapat
+    document.querySelectorAll('.sector-group-title.open').forEach(t => {
+        t.classList.remove('open');
+        t.nextElementSibling.classList.remove('open');
+    });
+
+    // Tiklanani ac (zaten aciksa kapali kalsin)
+    if (!isOpen) {
+        el.classList.add('open');
+        el.nextElementSibling.classList.add('open');
+    }
+}
+
+function selectSector(el, sector) {
+    document.querySelectorAll('.sector-item').forEach(i => i.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedSector = sector;
+
+    const info = document.getElementById('selectedInfo');
+    info.textContent = 'Seçilen: ' + sector;
+    info.classList.add('show');
+}
+
+function showScanControls(running, paused) {
+    const scanBtn = document.getElementById('scanBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    scanBtn.classList.remove('active-glow');
+    pauseBtn.classList.remove('active-glow');
+    stopBtn.classList.remove('active-glow');
+    if (running) {
+        scanBtn.disabled = true;
+        scanBtn.classList.add('active-glow');
+        scanBtn.textContent = 'Başlat';
+        pauseBtn.disabled = false;
+        stopBtn.disabled = false;
+        if (paused) {
+            pauseBtn.textContent = 'Devam Et';
+            pauseBtn.classList.add('active-glow');
+        } else {
+            pauseBtn.textContent = 'Duraklat';
+        }
+    } else {
+        scanBtn.disabled = false;
+        scanBtn.textContent = 'Başlat';
+        pauseBtn.disabled = true;
+        pauseBtn.textContent = 'Duraklat';
+        stopBtn.disabled = true;
+    }
+}
+
+function pauseScan() {
+    const pauseBtn = document.getElementById('pauseBtn');
+    const isPaused = pauseBtn.textContent.trim() === 'Devam Et';
+    if (isPaused) {
+        fetch('/api/scan/resume', {method: 'POST'});
+        pauseBtn.textContent = 'Duraklat';
+        pauseBtn.classList.remove('active-glow');
+    } else {
+        fetch('/api/scan/pause', {method: 'POST'});
+        pauseBtn.textContent = 'Devam Et';
+        pauseBtn.classList.add('active-glow');
+    }
+}
+
+function stopScan() {
+    if (!confirm('Tarama durdurulacak. Emin misiniz?')) return;
+    fetch('/api/scan/stop', {method: 'POST'}).then(() => {
+        showScanControls(false, false);
+        document.getElementById('stopBtn').classList.add('active-glow');
+        setTimeout(() => document.getElementById('stopBtn').classList.remove('active-glow'), 2000);
+    });
+}
+
+// Sayfa yuklendiginde: tarama devam ediyorsa takip et, degilse sifirla
+fetch('/api/status').then(r => r.json()).then(data => {
+    if (data.running) {
+        showScanControls(true, data.paused || false);
+        startPolling();
+    } else {
+        fetch('/api/reset', {method: 'POST'});
+    }
+});
+
+function startScan() {
+    const city = document.getElementById('citySelect').value;
+    const minResults = document.getElementById('minResults').value;
+
+    if (!selectedSector) { alert('Lütfen bir sektör seçin!'); return; }
+    if (!city) { alert('Lütfen bir şehir seçin!'); return; }
+
+    showScanControls(true, false);
+
+    // Acik dropdown'lari kapat
+    document.querySelectorAll('.sector-group-title.open').forEach(t => {
+        t.classList.remove('open');
+        t.nextElementSibling.classList.remove('open');
+    });
+
+    // UI sifirla
+    document.getElementById('statusText').textContent = 'Başlatılıyor...';
+    document.getElementById('statusText').className = 'status-text running';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('statTotal').textContent = '0';
+    document.getElementById('statFound').textContent = '0';
+    document.getElementById('statSheets').textContent = '0';
+    document.getElementById('resultsBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#475569;">Taranıyor...</td></tr>';
+    document.getElementById('resultCount').textContent = '0 sonuç';
+    document.getElementById('logPanel').innerHTML = '';
+
+    fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            sector: selectedSector,
+            city: city,
+            min_results: parseInt(minResults)
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            showScanControls(false, false);
+            return;
+        }
+        showScanControls(true, false);
+        startPolling();
+    });
+}
+
+function startPolling() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(fetchStatus, 1500);
+}
+
+function fetchStatus() {
+    fetch('/api/status')
+        .then(r => r.json())
+        .then(data => {
+            // Status
+            const statusEl = document.getElementById('statusText');
+            statusEl.textContent = data.status;
+            statusEl.className = 'status-text' + (data.running ? ' running' : (data.status.includes('Hata') ? ' error' : ' done'));
+
+            // Progress
+            const pct = data.total > 0 ? (data.progress / data.total * 100) : 0;
+            document.getElementById('progressFill').style.width = pct + '%';
+
+            // Stats
+            document.getElementById('statTotal').textContent = data.progress;
+            document.getElementById('statFound').textContent = data.results.length;
+            document.getElementById('statSheets').textContent = data.results.length;
+
+            // Results - sadece yeni satirlar eklendiginde guncelle
+            const tbody = document.getElementById('resultsBody');
+            document.getElementById('resultCount').textContent = data.results.length + ' sonuç';
+            const currentRowCount = tbody.querySelectorAll('tr[data-idx]').length;
+
+            if (data.results.length > 0 && data.results.length !== currentRowCount) {
+                // Ilk veri geldiginde placeholder'i temizle
+                if (currentRowCount === 0) {
+                    tbody.innerHTML = '';
+                }
+
+                // Sadece yeni satirlari ekle
+                for (let i = currentRowCount; i < data.results.length; i++) {
+                    const r = data.results[i];
+                    const tr = document.createElement('tr');
+                    tr.dataset.idx = i;
+                    tr.style.animation = 'fadeIn 0.3s ease';
+                    tr.innerHTML = `
+                        <td><input type="checkbox" class="result-check" value="${i}" onchange="updateResultActions()"></td>
+                        <td>${i + 1}</td>
+                        <td>${r.date || '-'}</td>
+                        <td>${r.sector || '-'}</td>
+                        <td>${r.name}</td>
+                        <td>${r.phone || '-'}</td>
+                        <td>${r.email}</td>
+                        <td>${r.domain ? '<a href="https://' + r.domain + '" target="_blank" style="color:#3b82f6">' + r.domain + '</a>' : '-'}</td>
+                        <td>${r.instagram ? '<a href="' + r.instagram + '" target="_blank" style="color:#e1306c">IG</a>' : '-'}</td>
+                        <td>${r.facebook ? '<a href="' + r.facebook + '" target="_blank" style="color:#1877f2">FB</a>' : '-'}</td>
+                        <td>${r.linkedin ? '<a href="' + r.linkedin + '" target="_blank" style="color:#0077b5">LI</a>' : '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+                document.getElementById('clearResultsBtn').style.display = 'inline-block';
+            }
+
+            // Logs
+            const logPanel = document.getElementById('logPanel');
+            logPanel.innerHTML = data.logs.map(log => {
+                let cls = 'log-line';
+                if (log.includes('BULUNDU')) cls += ' found';
+                else if (log.includes('HATA')) cls += ' error';
+                else if (log.includes('MÜKERRER')) cls += ' skip';
+                return `<div class="${cls}">${log}</div>`;
+            }).join('');
+            logPanel.scrollTop = logPanel.scrollHeight;
+
+            // Done?
+            if (!data.running) {
+                clearInterval(pollInterval);
+                showScanControls(false, false);
+            }
+        });
+}
+
+function toggleAllResults(el) {
+    document.querySelectorAll('.result-check').forEach(cb => cb.checked = el.checked);
+    updateResultActions();
+}
+
+function updateResultActions() {
+    const checked = document.querySelectorAll('.result-check:checked').length;
+    const btn = document.getElementById('deleteResultsBtn');
+    if (checked > 0) {
+        btn.style.display = 'inline-block';
+        btn.textContent = `Seçilenleri Sil (${checked})`;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function deleteSelectedResults() {
+    const indices = Array.from(document.querySelectorAll('.result-check:checked'))
+        .map(cb => parseInt(cb.value));
+    if (!indices.length) return;
+    if (!confirm(`${indices.length} kayıt Scanner sonuçlarından ve Google Sheets'ten silinecek. Emin misiniz?`)) return;
+
+    fetch('/api/scan/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ indices: indices })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert(data.error); return; }
+        alert(data.message);
+        document.getElementById('checkAllResults').checked = false;
+        updateResultActions();
+        // Durumu yenile
+        fetchStatus();
+    });
+}
+
+function clearResults() {
+    if (!confirm('Tüm tarama sonuçları ekrandan temizlenecek. Google Sheets\'teki veriler kalacak. Emin misiniz?')) return;
+    fetch('/api/reset', {method: 'POST'}).then(() => {
+        document.getElementById('resultsBody').innerHTML = '<tr><td colspan="12" style="text-align:center;padding:40px;color:#475569;">Henüz tarama yapılmadı</td></tr>';
+        document.getElementById('statTotal').textContent = '0';
+        document.getElementById('statFound').textContent = '0';
+        document.getElementById('statSheets').textContent = '0';
+        document.getElementById('resultCount').textContent = '0 sonuç';
+        document.getElementById('statusText').textContent = 'Hazır';
+        document.getElementById('progressFill').style.width = '0%';
+        document.getElementById('logPanel').innerHTML = '';
+        document.getElementById('clearResultsBtn').style.display = 'none';
+        document.getElementById('deleteResultsBtn').style.display = 'none';
+        document.getElementById('checkAllResults').checked = false;
+    });
+}
+</script>
+
+</body>
+</html>

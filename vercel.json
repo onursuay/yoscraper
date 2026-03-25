@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/*.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/unsubscribe(.*)", "dest": "/api/unsubscribe.py" },
+    { "src": "/api/unsubscribed", "dest": "/api/unsubscribed.py" }
+  ]
+}

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Scanner - Send Mail</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px 32px; }
+
+        /* Stats Bar */
+        .stats-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 140px; }
+        .stat-card .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .stat-card .value { font-size: 24px; font-weight: 700; color: #f1f5f9; }
+        .stat-card .value.sent { color: #22c55e; }
+        .stat-card .value.failed { color: #ef4444; }
+        .stat-card .value.pending { color: #3b82f6; }
+
+        /* Layout */
+        .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; }
+        .card-header { padding: 14px 18px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
+        .card-title { font-size: 13px; font-weight: 700; color: #f1f5f9; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-body { padding: 16px 18px; }
+
+        /* Compose */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #334155;
+            border-radius: 8px; color: #e2e8f0; font-size: 13px; outline: none; font-family: inherit;
+        }
+        .form-group input:focus, .form-group textarea:focus { border-color: #3b82f6; }
+        .form-group textarea { min-height: 180px; resize: vertical; }
+
+        .from-info { font-size: 12px; color: #64748b; padding: 8px 12px; background: #0f172a; border-radius: 8px; border: 1px solid #334155; }
+
+        /* Recipients */
+        .recipients-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .search-input { flex: 1; min-width: 150px; padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 12px; outline: none; }
+        .search-input:focus { border-color: #3b82f6; }
+
+        .recipient-list { max-height: 400px; overflow-y: auto; }
+        .recipient-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid rgba(51,65,85,0.3); font-size: 12px; transition: background 0.15s; }
+        .recipient-item:hover { background: rgba(59,130,246,0.05); }
+        .recipient-item input[type="checkbox"] { accent-color: #3b82f6; width: 15px; height: 15px; cursor: pointer; }
+        .recipient-name { color: #e2e8f0; font-weight: 500; min-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .recipient-email { color: #94a3b8; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .recipient-sector { color: #64748b; font-size: 11px; max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .select-bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: #172133; border-bottom: 1px solid #334155; font-size: 12px; color: #94a3b8; }
+        .select-bar a { color: #3b82f6; cursor: pointer; text-decoration: none; font-weight: 500; }
+        .select-bar a:hover { text-decoration: underline; }
+
+        /* Buttons */
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .btn-send { background: #3b82f6; color: white; width: 100%; margin-top: 8px; }
+        .btn-send:hover { background: #2563eb; }
+        .btn-send:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        .btn-sm { padding: 5px 12px; font-size: 11px; border-radius: 6px; }
+        .btn-outline { background: transparent; border: 1px solid #334155; color: #94a3b8; }
+        .btn-outline:hover { border-color: #3b82f6; color: #e2e8f0; }
+
+        /* History */
+        .history-table { width: 100%; }
+        .history-table th { padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; background: #172133; border-bottom: 1px solid #334155; }
+        .history-table td { padding: 8px 12px; font-size: 12px; color: #cbd5e1; border-bottom: 1px solid rgba(51,65,85,0.3); }
+        .status-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .status-sent { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .status-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .status-sending { background: rgba(59,130,246,0.15); color: #60a5fa; }
+
+        .empty-msg { text-align: center; padding: 40px; color: #475569; font-size: 13px; }
+
+        /* Progress */
+        .progress-bar { height: 4px; background: #334155; border-radius: 2px; margin-top: 8px; overflow: hidden; display: none; }
+        .progress-fill { height: 100%; background: #3b82f6; border-radius: 2px; transition: width 0.3s; width: 0%; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body>
+
+{% include 'header.html' %}
+
+<div class="container">
+
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="label">Database Firma</div>
+            <div class="value" id="statTotal">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">E-posta Mevcut</div>
+            <div class="value pending" id="statWithEmail">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Gonderilen</div>
+            <div class="value sent" id="statSent">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Basarisiz</div>
+            <div class="value failed" id="statFailed">0</div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- Left: Compose -->
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Mail Olustur</span>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Gonderen</label>
+                        <div class="from-info">YO Dijital &lt;info@yodijital.com&gt;</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Konu</label>
+                        <input type="text" id="inputSubject" value="Is Birligi Teklifi" placeholder="E-posta konusu...">
+                    </div>
+                    <div class="form-group">
+                        <label>Icerik (HTML)</label>
+                        <textarea id="inputBody" placeholder="HTML mail icerigi..."></textarea>
+                    </div>
+                    <div style="font-size:11px;color:#64748b;margin-bottom:12px;">
+                        Degiskenler: <code style="color:#3b82f6;">{firma_adi}</code> <code style="color:#3b82f6;">{sektor}</code> <code style="color:#3b82f6;">{sehir}</code> <code style="color:#3b82f6;">{from_name}</code> <code style="color:#3b82f6;">{email}</code>
+                    </div>
+                    <button class="btn btn-send" id="btnSend" onclick="sendMails()">
+                        Gonder (0 alici)
+                    </button>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Recipients -->
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Alicilar</span>
+                    <span style="font-size:12px;color:#64748b;" id="selectedCount">0 secili</span>
+                </div>
+                <div class="select-bar">
+                    <a onclick="selectAll()">Tumunu Sec</a>
+                    <a onclick="selectNone()">Temizle</a>
+                    <a onclick="selectUnsent()">Gonderilmemisleri Sec</a>
+                    <span style="margin-left:auto;" id="filterInfo"></span>
+                </div>
+                <div style="padding:8px 12px;border-bottom:1px solid #334155;">
+                    <input type="text" class="search-input" id="searchRecipients" placeholder="Firma, e-posta veya sektor ara..." oninput="filterRecipients()" style="width:100%;">
+                </div>
+                <div class="recipient-list" id="recipientList">
+                    <div class="empty-msg">Yukleniyor...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div class="card" style="margin-top:20px;">
+        <div class="card-header">
+            <span class="card-title">Gonderim Gecmisi</span>
+            <span style="font-size:12px;color:#64748b;" id="historyCount">0 kayit</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Saat</th>
+                        <th>Firma</th>
+                        <th>E-posta</th>
+                        <th>Konu</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    <tr><td colspan="5" class="empty-msg">Henuz gonderim yok.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const socket = io();
+let allRecipients = [];
+let sentEmails = new Set();
+
+// Load template
+async function loadTemplate() {
+    try {
+        const resp = await fetch('/api/sendmail/history');
+        const history = await resp.json();
+        history.forEach(h => {
+            if (h.status === 'sent') sentEmails.add(h.to);
+            addHistoryRow(h);
+        });
+        updateStats();
+    } catch(e) {}
+}
+
+// Load recipients from database
+async function loadRecipients() {
+    try {
+        const resp = await fetch('/api/database');
+        const data = await resp.json();
+        allRecipients = data.filter(r => r.email && r.email.trim());
+
+        document.getElementById('statTotal').textContent = data.length;
+        document.getElementById('statWithEmail').textContent = allRecipients.length;
+
+        renderRecipients(allRecipients);
+    } catch(e) {
+        document.getElementById('recipientList').innerHTML = '<div class="empty-msg">Database yuklenemedi.</div>';
+    }
+}
+
+// Load email template file
+async function loadEmailTemplate() {
+    try {
+        const resp = await fetch('/api/sendmail/template');
+        const data = await resp.json();
+        if (data.html) {
+            document.getElementById('inputBody').value = data.html;
+        }
+    } catch(e) {}
+}
+
+function renderRecipients(list) {
+    const container = document.getElementById('recipientList');
+    if (!list.length) {
+        container.innerHTML = '<div class="empty-msg">E-postasi olan firma bulunamadi.</div>';
+        return;
+    }
+    container.innerHTML = list.map((r, i) => {
+        const isSent = sentEmails.has(r.email);
+        return `<div class="recipient-item">
+            <input type="checkbox" data-email="${r.email}" data-name="${r.name || ''}" data-sector="${r.sector || ''}" data-city="${r.city || ''}" onchange="updateSelectedCount()">
+            <span class="recipient-name" title="${r.name || ''}">${r.name || '-'}</span>
+            <span class="recipient-email" title="${r.email}">${r.email}</span>
+            <span class="recipient-sector">${r.sector || ''}</span>
+            ${isSent ? '<span class="status-badge status-sent" style="font-size:10px;">Gonderildi</span>' : ''}
+        </div>`;
+    }).join('');
+    document.getElementById('filterInfo').textContent = list.length + ' firma';
+}
+
+function filterRecipients() {
+    const q = document.getElementById('searchRecipients').value.toLowerCase().trim();
+    if (!q) { renderRecipients(allRecipients); return; }
+    const filtered = allRecipients.filter(r =>
+        (r.name || '').toLowerCase().includes(q) ||
+        (r.email || '').toLowerCase().includes(q) ||
+        (r.sector || '').toLowerCase().includes(q)
+    );
+    renderRecipients(filtered);
+}
+
+function getSelectedRecipients() {
+    const checks = document.querySelectorAll('#recipientList input[type="checkbox"]:checked');
+    return Array.from(checks).map(c => ({ email: c.dataset.email, name: c.dataset.name, sector: c.dataset.sector || '', city: c.dataset.city || '' }));
+}
+
+function updateSelectedCount() {
+    const selected = getSelectedRecipients();
+    document.getElementById('selectedCount').textContent = selected.length + ' secili';
+    document.getElementById('btnSend').textContent = `Gonder (${selected.length} alici)`;
+}
+
+function selectAll() {
+    document.querySelectorAll('#recipientList input[type="checkbox"]').forEach(c => c.checked = true);
+    updateSelectedCount();
+}
+function selectNone() {
+    document.querySelectorAll('#recipientList input[type="checkbox"]').forEach(c => c.checked = false);
+    updateSelectedCount();
+}
+function selectUnsent() {
+    document.querySelectorAll('#recipientList input[type="checkbox"]').forEach(c => {
+        c.checked = !sentEmails.has(c.dataset.email);
+    });
+    updateSelectedCount();
+}
+
+// Send
+async function sendMails() {
+    const recipients = getSelectedRecipients();
+    const subject = document.getElementById('inputSubject').value.trim();
+    const html_body = document.getElementById('inputBody').value.trim();
+
+    if (!recipients.length) return alert('Alici seciniz.');
+    if (!subject) return alert('Konu giriniz.');
+    if (!html_body) return alert('Mail icerigi giriniz.');
+
+    if (!confirm(`${recipients.length} firmaya mail gonderilecek. Devam?`)) return;
+
+    const btn = document.getElementById('btnSend');
+    btn.disabled = true;
+    btn.textContent = 'Gonderiliyor...';
+    document.getElementById('progressBar').style.display = 'block';
+
+    try {
+        const resp = await fetch('/api/sendmail/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ recipients, subject, html_body })
+        });
+        const data = await resp.json();
+        if (data.error) {
+            alert(data.error);
+            btn.disabled = false;
+            btn.textContent = `Gonder (${recipients.length} alici)`;
+        }
+    } catch(e) {
+        alert('Gonderim hatasi: ' + e.message);
+        btn.disabled = false;
+    }
+}
+
+// Socket events
+socket.on('mail_update', (entry) => {
+    if (entry.status === 'sent') sentEmails.add(entry.to);
+    addHistoryRow(entry);
+    updateStats();
+
+    // Progress
+    const total = parseInt(document.getElementById('btnSend').textContent.match(/\d+/)?.[0] || 0);
+    if (total > 0) {
+        const done = document.querySelectorAll('#historyBody tr').length;
+        document.getElementById('progressFill').style.width = (done / total * 100) + '%';
+    }
+});
+
+socket.on('mail_done', (data) => {
+    const btn = document.getElementById('btnSend');
+    btn.disabled = false;
+    updateSelectedCount();
+    document.getElementById('progressBar').style.display = 'none';
+    document.getElementById('progressFill').style.width = '0%';
+    filterRecipients(); // Refresh sent badges
+});
+
+function addHistoryRow(entry) {
+    const tbody = document.getElementById('historyBody');
+    if (tbody.querySelector('.empty-msg')) tbody.innerHTML = '';
+
+    const statusClass = entry.status === 'sent' ? 'status-sent' : entry.status === 'failed' ? 'status-failed' : 'status-sending';
+    const statusText = entry.status === 'sent' ? 'Gonderildi' : entry.status === 'failed' ? 'Basarisiz' : 'Gonderiliyor';
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>${entry.timestamp}</td>
+        <td>${entry.name || '-'}</td>
+        <td>${entry.to}</td>
+        <td>${entry.subject}</td>
+        <td><span class="status-badge ${statusClass}">${statusText}</span>${entry.error ? ' <span style="font-size:10px;color:#ef4444;">'+entry.error+'</span>' : ''}</td>
+    `;
+    tbody.prepend(row);
+    document.getElementById('historyCount').textContent = tbody.children.length + ' kayit';
+}
+
+function updateStats() {
+    const rows = document.querySelectorAll('#historyBody tr');
+    let sent = 0, failed = 0;
+    rows.forEach(r => {
+        if (r.querySelector('.status-sent')) sent++;
+        if (r.querySelector('.status-failed')) failed++;
+    });
+    document.getElementById('statSent').textContent = sent;
+    document.getElementById('statFailed').textContent = failed;
+}
+
+// Init
+loadRecipients();
+loadTemplate();
+loadEmailTemplate();
+</script>
+
+</body>
+</html>

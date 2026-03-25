@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Scanner Database - Database</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+        /* Header */
+        .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header h1 { font-size: 20px; color: #f1f5f9; }
+        .header .badge { background: #8b5cf6; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .nav-links { display: flex; gap: 16px; }
+        .nav-links a { color: #94a3b8; text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 6px; transition: all 0.15s; }
+        .nav-links a:hover { background: #334155; color: #e2e8f0; }
+
+        /* Toolbar */
+        .toolbar { padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .toolbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .toolbar-right { display: flex; align-items: center; gap: 12px; }
+
+        .search-box { padding: 8px 14px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 13px; width: 280px; outline: none; }
+        .search-box:focus { border-color: #8b5cf6; }
+
+        .filter-select { padding: 8px 12px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 13px; outline: none; }
+        .filter-select:focus { border-color: #8b5cf6; }
+
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .btn-primary { background: #8b5cf6; color: white; }
+        .btn-primary:hover { background: #7c3aed; }
+        .btn-outline { background: transparent; border: 1px solid #334155; color: #94a3b8; }
+        .btn-outline:hover { border-color: #8b5cf6; color: #e2e8f0; }
+
+        .stat-pills { display: flex; gap: 8px; }
+        .stat-pill { padding: 4px 12px; background: #172133; border-radius: 20px; font-size: 12px; color: #94a3b8; }
+        .stat-pill strong { color: #e2e8f0; margin-right: 4px; }
+
+        /* Sticky wrapper: toolbar + thead birlikte sabit */
+        .sticky-zone {
+            position: sticky;
+            top: 64px;
+            z-index: 50;
+            background: #0f172a;
+        }
+
+        /* Table */
+        .table-container { padding: 0 32px 32px; }
+        .table-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+
+        th { background: #172133; padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: 1px solid #334155; cursor: pointer; user-select: none; white-space: nowrap; }
+        th:hover { color: #94a3b8; }
+        th.sorted { color: #8b5cf6; }
+        th .sort-icon { margin-left: 4px; font-size: 10px; }
+
+        td { padding: 8px 14px; font-size: 13px; border-bottom: 1px solid rgba(51,65,85,0.3); color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
+        tr:hover td { background: rgba(139,92,246,0.04); }
+
+        .source-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .source-scanner { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .source-lead { background: rgba(16,185,129,0.15); color: #34d399; }
+
+        .social-link { color: #94a3b8; text-decoration: none; margin-right: 6px; font-size: 12px; }
+        .social-link:hover { color: #e2e8f0; }
+        .social-link.ig { color: #e1306c; }
+        .social-link.li { color: #0077b5; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #475569; }
+        .empty-state h3 { font-size: 16px; margin-bottom: 8px; color: #64748b; }
+
+
+        /* Pagination */
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid #334155; }
+        .pagination .info { font-size: 12px; color: #64748b; }
+        .page-btns { display: flex; gap: 4px; }
+        .page-btn { padding: 6px 12px; background: #172133; border: 1px solid #334155; border-radius: 6px; color: #94a3b8; font-size: 12px; cursor: pointer; }
+        .page-btn:hover { border-color: #8b5cf6; }
+        .page-btn.active { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+
+        /* Column header with filter icon */
+        .th-content {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        .th-label { cursor: pointer; }
+        .th-filter-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            transition: all 0.15s;
+            opacity: 0.3;
+        }
+        .th-filter-btn:hover { opacity: 0.7; background: rgba(255,255,255,0.05); }
+        .th-filter-btn.active { opacity: 1; }
+        .th-filter-btn svg { width: 12px; height: 12px; stroke: #94a3b8; fill: none; stroke-width: 2; }
+        .th-filter-btn.active svg { stroke: #8b5cf6; }
+
+        /* Filter popover */
+        .filter-popover {
+            display: none;
+            position: fixed;
+            margin-top: 4px;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 999;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            width: 220px;
+        }
+        .filter-popover.open { display: block; }
+        .filter-popover input {
+            width: 100%;
+            padding: 7px 10px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 12px;
+            outline: none;
+        }
+        .filter-popover input:focus { border-color: #8b5cf6; }
+        .filter-popover .fp-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .filter-popover .fp-btn {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .fp-btn-clear { background: #334155; color: #94a3b8; }
+        .fp-btn-clear:hover { background: #475569; }
+
+        /* Page size select */
+        .page-size-select {
+            padding: 5px 8px;
+            background: #172133;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+        }
+        .page-size-select:focus { border-color: #8b5cf6; }
+    </style>
+</head>
+<body>
+
+{% include 'header.html' %}
+
+<div class="sticky-zone">
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <input type="text" class="search-box" id="searchBox" placeholder="Firma, e-posta, domain ara..." oninput="applyFilters()">
+            <select class="filter-select" id="sourceFilter" onchange="applyFilters()">
+                <option value="">Tüm Kaynaklar</option>
+                <option value="Scanner">Scanner</option>
+                <option value="Lead">Lead</option>
+            </select>
+            <select class="filter-select" id="sectorFilter" onchange="applyFilters()">
+                <option value="">Tüm Sektörler</option>
+            </select>
+            <div class="stat-pills" id="statPills"></div>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-outline" id="dbDeleteBtn" style="display:none; background:#ef4444; color:white; border-color:#ef4444;" onclick="deleteSelectedDb()">Seçilenleri Sil</button>
+            <button class="btn btn-outline" onclick="loadData()">Yenile</button>
+        </div>
+    </div>
+
+    <div style="padding: 0 32px;">
+        <table style="width:100%; border-collapse:collapse; background:#172133; border-radius:12px 12px 0 0; overflow:hidden;">
+            <thead>
+                    <tr>
+                        <th style="width:36px"><input type="checkbox" id="dbCheckAll" onchange="toggleAllDb(this)"></th>
+                        <th style="width:80px; position:relative;">
+                            <div class="th-content">
+                                <span class="th-label" onclick="sortBy('source')">Kaynak</span>
+                                <button class="th-filter-btn" data-col="source" onclick="toggleFilter(event, this)"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                            </div>
+                            <div class="filter-popover" data-col="source"><input type="text" class="col-filter" data-col="source" placeholder="Kaynak filtrele..." oninput="applyFilters()"><div class="fp-actions"><button class="fp-btn fp-btn-clear" onclick="clearFilter('source')">Temizle</button></div></div>
+                        </th>
+                        <th style="position:relative;">
+                            <div class="th-content">
+                                <span class="th-label" onclick="sortBy('date')">Tarih</span>
+                                <button class="th-filter-btn" data-col="date" onclick="toggleFilter(event, this)"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                            </div>
+                            <div class="filter-popover" data-col="date"><input type="text" class="col-filter" data-col="date" placeholder="Tarih filtrele..." oninput="applyFilters()"><div class="fp-actions"><button class="fp-btn fp-btn-clear" onclick="clearFilter('date')">Temizle</button></div></div>
+                        </th>
+                        <th style="position:relative;">
+                            <div class="th-content">
+                                <span class="th-label" onclick="sortBy('sector')">Sektör</span>
+                                <button class="th-filter-btn" data-col="sector" onclick="toggleFilter(event, this)"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                            </div>
+                            <div class="filter-popover" data-col="sector"><input type="text" class="col-filter" data-col="sector" placeholder="Sektör filtrele..." oninput="applyFilters()"><div class="fp-actions"><button class="fp-btn fp-btn-clear" onclick="clearFilter('sector')">Temizle</button></div></div>
+                        </th>
+                        <th style="position:relative;">
+                            <div class="th-content">
+                                <span class="th-label" onclick="sortBy('name')">Firma Adı</span>
+                                <button class="th-filter-btn" data-col="name" onclick="toggleFilter(event, this)"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                            </div>
+                            <div class="filter-popover" data-col="name"><input type="text" class="col-filter" data-col="name" placeholder="Firma filtrele..." oninput="applyFilters()"><div class="fp-actions"><button class="fp-btn fp-btn-clear" onclick="clearFilter('name')">Temizle</button></div></div>
+                        </th>
+                        <th style="position:relative;">
+                            <div class="th-content">
+                                <span class="th-label" onclick="sortBy('phone')">Telefon</span>
+                                <button class="th-filter-btn" data-col="phone" onclick="toggleFilter(event, this)"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                            </div>
+                            <div class="filter-popover" data-col="phone"><input type="text" class="col-filter" data-col="phone" placeholder="Telefon filtrele..." oninput="applyFilters()"><div class="fp-actions"><button class="fp-btn fp-btn-clear" onclick="clearFilter('phone')">Temizle</button></div></div>
+                        </th>
+                        <th style="position:relative;">
+                            <div class="th-content">
+                                <span class="th-label" onclick="sortBy('email')">E-posta</span>
+                                <button class="th-filter-btn" data-col="email" onclick="toggleFilter(event, this)"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                            </div>
+                            <div class="filter-popover" data-col="email"><input type="text" class="col-filter" data-col="email" placeholder="E-posta filtrele..." oninput="applyFilters()"><div class="fp-actions"><button class="fp-btn fp-btn-clear" onclick="clearFilter('email')">Temizle</button></div></div>
+                        </th>
+                        <th style="position:relative;">
+                            <div class="th-content">
+                                <span class="th-label" onclick="sortBy('domain')">Domain</span>
+                                <button class="th-filter-btn" data-col="domain" onclick="toggleFilter(event, this)"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                            </div>
+                            <div class="filter-popover" data-col="domain"><input type="text" class="col-filter" data-col="domain" placeholder="Domain filtrele..." oninput="applyFilters()"><div class="fp-actions"><button class="fp-btn fp-btn-clear" onclick="clearFilter('domain')">Temizle</button></div></div>
+                        </th>
+                        <th style="width:35px">INS</th>
+                        <th style="width:35px">FB</th>
+                        <th style="width:35px">LNK</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+</div><!-- /sticky-zone -->
+
+<div class="table-container">
+    <div class="table-card" style="border-radius: 0 0 12px 12px;">
+        <table style="width:100%; border-collapse:collapse;">
+            <tbody id="tbody">
+                <tr><td colspan="11" class="empty-state"><h3>Yükleniyor...</h3></td></tr>
+            </tbody>
+        </table>
+        <div class="pagination">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span class="info" id="pageInfo">-</span>
+                <select class="page-size-select" id="pageSizeSelect" onchange="changePageSize()">
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="150">150</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
+                <span class="info">kayıt/sayfa</span>
+            </div>
+            <div class="page-btns" id="pageBtns"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allData = [];
+let filteredData = [];
+let currentSort = { field: 'name', asc: true };
+let currentPage = 1;
+let PAGE_SIZE = 50;
+
+function loadData() {
+    fetch('/api/database')
+        .then(r => r.json())
+        .then(response => {
+            if (response.error) { alert(response.error); return; }
+            allData = response.data;
+            updateStats();
+            updateSectorFilter();
+            applyFilters();
+        });
+}
+
+function updateStats() {
+    const scanner = allData.filter(d => d.source === 'Scanner').length;
+    const leads = allData.filter(d => d.source !== 'Scanner').length;
+    const withEmail = allData.filter(d => d.email).length;
+    document.getElementById('statPills').innerHTML = `
+        <div class="stat-pill"><strong>${allData.length}</strong> Toplam</div>
+        <div class="stat-pill"><strong>${scanner}</strong> Scanner</div>
+        <div class="stat-pill"><strong>${leads}</strong> Lead</div>
+        <div class="stat-pill"><strong>${withEmail}</strong> E-postalı</div>
+    `;
+}
+
+function updateSectorFilter() {
+    const sectors = [...new Set(allData.map(d => d.sector).filter(Boolean))].sort();
+    const sel = document.getElementById('sectorFilter');
+    sel.innerHTML = '<option value="">Tüm Sektörler</option>' +
+        sectors.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+
+function applyFilters() {
+    updateFilterIcons();
+    const q = document.getElementById('searchBox').value.toLowerCase();
+    const source = document.getElementById('sourceFilter').value;
+    const sector = document.getElementById('sectorFilter').value;
+
+    // Sutun filtreleri
+    const colFilters = {};
+    document.querySelectorAll('.col-filter').forEach(input => {
+        const val = input.value.toLowerCase().trim();
+        if (val) colFilters[input.dataset.col] = val;
+    });
+
+    filteredData = allData.filter(d => {
+        if (source && !d.source.includes(source)) return false;
+        if (sector && d.sector !== sector) return false;
+        if (q) {
+            const searchable = `${d.name} ${d.email} ${d.domain} ${d.phone} ${d.sector}`.toLowerCase();
+            if (!searchable.includes(q)) return false;
+        }
+        // Sutun bazli filtreler
+        for (const [col, val] of Object.entries(colFilters)) {
+            if (!(d[col] || '').toLowerCase().includes(val)) return false;
+        }
+        return true;
+    });
+
+    // Sort
+    filteredData.sort((a, b) => {
+        const va = (a[currentSort.field] || '').toLowerCase();
+        const vb = (b[currentSort.field] || '').toLowerCase();
+        const cmp = va.localeCompare(vb, 'tr');
+        return currentSort.asc ? cmp : -cmp;
+    });
+
+    currentPage = 1;
+    renderTable();
+}
+
+function sortBy(field) {
+    if (currentSort.field === field) {
+        currentSort.asc = !currentSort.asc;
+    } else {
+        currentSort.field = field;
+        currentSort.asc = true;
+    }
+    applyFilters();
+}
+
+function renderTable() {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const pageData = filteredData.slice(start, end);
+    const tbody = document.getElementById('tbody');
+
+    if (!pageData.length) {
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state"><h3>Kayıt bulunamadı</h3></td></tr>';
+        document.getElementById('pageInfo').textContent = '-';
+        document.getElementById('pageBtns').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = pageData.map(d => {
+        const sourceClass = d.source === 'Scanner' ? 'source-scanner' : 'source-lead';
+        const sourceLabel = d.source === 'Scanner' ? 'Scanner' : 'Lead';
+
+        return `<tr>
+            <td><input type="checkbox" class="db-check" value="${d.id}" data-source="${d.source}" data-sheet="${d.sheet_name}" data-row="${d.sheet_row}" onchange="updateDbActions()"></td>
+            <td><span class="source-badge ${sourceClass}">${sourceLabel}</span></td>
+            <td>${d.date || '-'}</td>
+            <td>${d.sector || '-'}</td>
+            <td title="${d.name}">${d.name || '-'}</td>
+            <td>${d.phone || '-'}</td>
+            <td>${d.email || '-'}</td>
+            <td>${d.domain || '-'}</td>
+            <td>${d.instagram ? '<a href="' + d.instagram + '" target="_blank" class="social-link ig">IG</a>' : '-'}</td>
+            <td>${d.facebook ? '<a href="' + d.facebook + '" target="_blank" class="social-link" style="color:#1877f2">FB</a>' : '-'}</td>
+            <td>${d.linkedin ? '<a href="' + d.linkedin + '" target="_blank" class="social-link li">LI</a>' : '-'}</td>
+        </tr>`;
+    }).join('');
+
+    // Pagination
+    const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+    document.getElementById('pageInfo').textContent =
+        `${start + 1}-${Math.min(end, filteredData.length)} / ${filteredData.length} kayıt`;
+
+    let btns = '';
+    for (let p = 1; p <= totalPages; p++) {
+        if (totalPages > 7 && p > 3 && p < totalPages - 2 && Math.abs(p - currentPage) > 1) {
+            if (p === 4) btns += '<span class="page-btn" style="border:none;cursor:default;">...</span>';
+            continue;
+        }
+        btns += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+    }
+    document.getElementById('pageBtns').innerHTML = btns;
+}
+
+function goPage(p) { currentPage = p; renderTable(); }
+
+function changePageSize() {
+    PAGE_SIZE = parseInt(document.getElementById('pageSizeSelect').value);
+    currentPage = 1;
+    renderTable();
+}
+
+function toggleFilter(e, btn) {
+    e.stopPropagation();
+    const popover = btn.closest('th').querySelector('.filter-popover');
+    const isOpen = popover.classList.contains('open');
+
+    // Tum acik popover'lari kapat
+    document.querySelectorAll('.filter-popover.open').forEach(p => p.classList.remove('open'));
+
+    if (!isOpen) {
+        // Buton pozisyonuna gore popover'i yerles
+        const rect = btn.getBoundingClientRect();
+        popover.style.top = (rect.bottom + 4) + 'px';
+        popover.style.left = Math.max(8, rect.left - 80) + 'px';
+        popover.classList.add('open');
+        popover.querySelector('input').focus();
+    }
+}
+
+function clearFilter(col) {
+    const input = document.querySelector(`.col-filter[data-col="${col}"]`);
+    if (input) { input.value = ''; }
+    // Popover'i kapat
+    document.querySelectorAll('.filter-popover.open').forEach(p => p.classList.remove('open'));
+    // Ikon durumunu guncelle
+    updateFilterIcons();
+    applyFilters();
+}
+
+function updateFilterIcons() {
+    document.querySelectorAll('.th-filter-btn').forEach(btn => {
+        const col = btn.dataset.col;
+        const input = document.querySelector(`.col-filter[data-col="${col}"]`);
+        if (input && input.value.trim()) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// Dis tikla - popover kapat
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.filter-popover') && !e.target.closest('.th-filter-btn')) {
+        document.querySelectorAll('.filter-popover.open').forEach(p => p.classList.remove('open'));
+    }
+});
+
+let selectAllMode = false; // true = tüm filtrelenmiş veri seçili
+
+function toggleAllDb(el) {
+    selectAllMode = el.checked;
+    document.querySelectorAll('.db-check').forEach(cb => cb.checked = el.checked);
+    updateDbActions();
+}
+
+function updateDbActions() {
+    const checkedOnPage = document.querySelectorAll('.db-check:checked').length;
+    const totalSelected = selectAllMode ? filteredData.length : checkedOnPage;
+    const btn = document.getElementById('dbDeleteBtn');
+    if (totalSelected > 0) {
+        btn.style.display = 'inline-block';
+        btn.textContent = `Seçilenleri Sil (${totalSelected})`;
+    } else {
+        btn.style.display = 'none';
+        selectAllMode = false;
+    }
+}
+
+function deleteSelectedDb() {
+    let scannerRows = [];
+
+    if (selectAllMode) {
+        // Tüm filtrelenmiş veriden Scanner kayıtlarını al
+        filteredData.forEach(d => {
+            if (d.source === 'Scanner') {
+                scannerRows.push(d.sheet_row);
+            }
+        });
+    } else {
+        // Sadece sayfadaki seçili checkbox'lar
+        const checks = Array.from(document.querySelectorAll('.db-check:checked'));
+        if (!checks.length) return;
+        checks.forEach(cb => {
+            if (cb.dataset.source === 'Scanner') {
+                scannerRows.push(parseInt(cb.dataset.row));
+            }
+        });
+    }
+
+    const totalCount = selectAllMode ? filteredData.length : document.querySelectorAll('.db-check:checked').length;
+    if (!confirm(`${totalCount} kayıt silinecek. Emin misiniz?`)) return;
+
+    if (scannerRows.length > 0) {
+        fetch('/api/domains/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows: scannerRows })
+        })
+        .then(r => r.json())
+        .then(data => {
+            selectAllMode = false;
+            document.getElementById('dbCheckAll').checked = false;
+            updateDbActions();
+            loadData();
+        });
+    } else {
+        alert('Sadece Scanner kayıtları silinebilir. Lead kayıtları kaynak sheet\'ten yönetilmelidir.');
+        selectAllMode = false;
+        document.getElementById('dbCheckAll').checked = false;
+        updateDbActions();
+    }
+}
+
+// Sayfa yuklendiginde
+loadData();
+</script>
+
+</body>
+</html>
