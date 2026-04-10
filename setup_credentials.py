@@ -11,16 +11,15 @@ sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
 print(f"[setup] GOOGLE_SERVICE_ACCOUNT_JSON uzunluk: {len(sa_json)} karakter")
 
 if not sa_json:
-    print("[setup] HATA: GOOGLE_SERVICE_ACCOUNT_JSON env variable boş veya yok!")
-    print("[setup] Railway Variables'a GOOGLE_SERVICE_ACCOUNT_JSON ekleyin.")
-    sys.exit(1)
+    print("[setup] UYARI: GOOGLE_SERVICE_ACCOUNT_JSON env variable boş veya yok, atlanıyor.")
+    sys.exit(0)
 
 try:
     sa_data = json.loads(sa_json)
 except json.JSONDecodeError as e:
     print(f"[setup] HATA: JSON parse edilemedi: {e}")
     print(f"[setup] İlk 100 karakter: {sa_json[:100]}")
-    sys.exit(1)
+    sys.exit(0)
 
 os.makedirs("credentials", exist_ok=True)
 with open("credentials/service_account.json", "w") as f:
