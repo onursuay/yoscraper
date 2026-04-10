@@ -19,7 +19,15 @@ def get_google_credentials(scopes):
     _log = logging.getLogger("config")
     from google.oauth2.service_account import Credentials
 
-    sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip().strip('"').strip("'")
+    sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+    # BOM, görünmez karakterler ve tırnakları temizle
+    sa_json = sa_json.encode("utf-8").decode("utf-8-sig")  # BOM kaldır
+    sa_json = sa_json.strip().strip('"').strip("'").strip()
+    # JSON başlangıcını bul ({ karakterinden itibaren al)
+    brace_idx = sa_json.find("{")
+    if brace_idx > 0:
+        _log.warning(f"[credentials] JSON başından {brace_idx} karakter atlandı: {repr(sa_json[:brace_idx])}")
+        sa_json = sa_json[brace_idx:]
     _log.info(f"[credentials] GOOGLE_SERVICE_ACCOUNT_JSON uzunluk: {len(sa_json)}, ilk 10 karakter: {repr(sa_json[:10])}")
 
     if sa_json:
