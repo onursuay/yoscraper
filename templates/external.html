@@ -202,19 +202,48 @@
                 <div id="fileParseMsg"></div>
             </div>
 
-            <!-- Google Sheets tab -->
+            <!-- Google Sheets tab (OAuth) -->
             <div id="tab-sheets" class="hidden">
-                <div class="sa-box">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                    <input type="text" readonly value="sheets-writer@chrome-sum-490707-h8.iam.gserviceaccount.com" id="saEmail">
-                    <button onclick="copySaEmail(this)">Kopyala</button>
+
+                <!-- Bağlı değil -->
+                <div id="gsNotConnected" style="text-align:center; padding:36px 0;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="1.4" style="margin-bottom:14px;">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+                    </svg>
+                    <div style="font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:6px;">Google hesabınızı bağlayın</div>
+                    <div style="font-size:13px;color:#64748b;margin-bottom:20px;">Drive'ınızdaki Sheets dosyalarına erişmek için Google ile giriş yapın.</div>
+                    <a href="/api/google/connect" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 8v8M8 12h8"/></svg>
+                        Google ile Bağlan
+                    </a>
                 </div>
-                <div class="gs-input-row">
-                    <input type="text" id="gsUrl" placeholder="Google Sheets URL yapıştırın...">
-                    <button class="btn btn-primary" onclick="fetchGsSheets()" id="gsFetchBtn">Sheet'leri Getir</button>
+
+                <!-- Bağlı -->
+                <div id="gsConnected" class="hidden">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:8px;height:8px;background:#10b981;border-radius:50%;"></div>
+                            <span style="font-size:13px;color:#34d399;font-weight:600;">Google hesabı bağlandı</span>
+                        </div>
+                        <button class="btn btn-outline" style="font-size:12px;padding:6px 12px;" onclick="gsDisconnect()">Bağlantıyı Kes</button>
+                    </div>
+
+                    <!-- Arama -->
+                    <div class="gs-input-row" style="margin-bottom:12px;">
+                        <input type="text" id="gsSearch" placeholder="Dosya ara..." oninput="gsSearchFiles(this.value)">
+                    </div>
+
+                    <!-- Dosya listesi -->
+                    <div id="gsFileList" style="max-height:220px;overflow-y:auto;"></div>
+
+                    <!-- Sekme listesi -->
+                    <div id="gsTabList" class="hidden" style="margin-top:12px;">
+                        <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Sekme seçin:</div>
+                        <div id="gsTabItems"></div>
+                    </div>
+
+                    <div id="gsStatusMsg"></div>
                 </div>
-                <div id="gsSheetList"></div>
-                <div id="gsStatusMsg"></div>
             </div>
 
             <div class="btn-row">
@@ -361,8 +390,9 @@ let sourceHeaders = [];   // file column names
 let sourceRows = [];      // array of arrays
 let sourceTotal = 0;
 let currentTab = 'file';
-let gsCurrentUrl = '';
-let gsSelectedSheet = null;
+let gsSpreadsheetId = '';
+let gsSelectedTab = null;
+let gsSearchTimer = null;
 let extSelectedSheet = null;
 let extCurrentUrl = '';
 
@@ -482,54 +512,104 @@ function showParseMsg(msg, type) {
     el.innerHTML = `<div class="status-msg ${type}" style="margin-top:10px;">${msg}</div>`;
 }
 
-// ─── GOOGLE SHEETS (step 1) ───────────────────────────────────────────────
-function fetchGsSheets() {
-    const url = document.getElementById('gsUrl').value.trim();
-    if (!url) return;
-    const btn = document.getElementById('gsFetchBtn');
-    btn.disabled = true; btn.textContent = 'Yükleniyor...';
-
-    fetch('/api/database/list-sheets', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({url})
-    }).then(r=>r.json()).then(data => {
-        btn.disabled = false; btn.textContent = "Sheet'leri Getir";
-        if (data.error) { document.getElementById('gsStatusMsg').innerHTML = `<div class="status-msg error" style="margin-top:10px;">${data.error}</div>`; return; }
-        gsCurrentUrl = data.url;
-        gsSelectedSheet = null;
-        document.getElementById('gsStatusMsg').innerHTML = '';
-        const list = document.getElementById('gsSheetList');
-        list.innerHTML = `<div style="font-size:13px;font-weight:600;color:#f1f5f9;margin:14px 0 8px;">${data.spreadsheet_title}</div>` +
-            data.sheets.map(s => `
-                <label class="sheet-option" onclick="selectGsSheet('${s.title.replace(/'/g,"\\'")}', this)">
-                    <div>
-                        <div class="si-name">${s.title}</div>
-                        <div class="si-meta">${s.rows} satır · ${s.headers.slice(0,5).join(', ')}</div>
-                    </div>
-                    <input type="radio" name="gssheet" class="sheet-radio" value="${s.title}">
-                </label>`).join('');
-    }).catch(e => { btn.disabled=false; btn.textContent="Sheet'leri Getir"; });
+// ─── GOOGLE SHEETS OAuth (step 1) ────────────────────────────────────────
+function gsCheckStatus() {
+    fetch('/api/google/status').then(r=>r.json()).then(data => {
+        document.getElementById('gsNotConnected').classList.toggle('hidden', data.connected);
+        document.getElementById('gsConnected').classList.toggle('hidden', !data.connected);
+        if (data.connected) gsLoadFiles();
+    });
 }
 
-function selectGsSheet(title, el) {
-    gsSelectedSheet = title;
-    document.querySelectorAll('#gsSheetList .sheet-option').forEach(o => o.classList.remove('selected'));
+function gsLoadFiles(q='') {
+    const url = '/api/google/sheets' + (q ? '?q=' + encodeURIComponent(q) : '');
+    fetch(url).then(r=>r.json()).then(data => {
+        if (data.error === 'google_not_connected' || data.error === 'google_token_expired') {
+            document.getElementById('gsNotConnected').classList.remove('hidden');
+            document.getElementById('gsConnected').classList.add('hidden');
+            return;
+        }
+        const files = data.files || [];
+        const el = document.getElementById('gsFileList');
+        if (!files.length) {
+            el.innerHTML = '<div style="font-size:13px;color:#64748b;padding:12px 0;">Dosya bulunamadı.</div>';
+            return;
+        }
+        el.innerHTML = files.map(f => `
+            <label class="sheet-option" onclick="gsSelectFile('${f.id}', '${f.name.replace(/'/g,"\\'").replace(/"/g,"&quot;")}', this)">
+                <div>
+                    <div class="si-name">${f.name}</div>
+                    <div class="si-meta">${new Date(f.modifiedTime).toLocaleDateString('tr-TR')}</div>
+                </div>
+                <input type="radio" name="gsfile" class="sheet-radio">
+            </label>`).join('');
+    });
+}
+
+function gsSearchFiles(val) {
+    clearTimeout(gsSearchTimer);
+    gsSearchTimer = setTimeout(() => gsLoadFiles(val), 400);
+}
+
+function gsSelectFile(id, name, el) {
+    gsSpreadsheetId = id;
+    gsSelectedTab = null;
+    document.querySelectorAll('#gsFileList .sheet-option').forEach(o=>o.classList.remove('selected'));
+    el.classList.add('selected');
+    updateStep1Btn();
+
+    // Sekmeleri yükle
+    const tabList = document.getElementById('gsTabList');
+    const tabItems = document.getElementById('gsTabItems');
+    tabList.classList.remove('hidden');
+    tabItems.innerHTML = '<div style="font-size:12px;color:#64748b;">Yükleniyor...</div>';
+
+    fetch(`/api/google/sheets/${id}`).then(r=>r.json()).then(data => {
+        const tabs = data.tabs || [];
+        if (tabs.length === 1) {
+            // Tek sekme varsa otomatik seç
+            gsSelectedTab = tabs[0].title;
+            tabItems.innerHTML = `<div class="sheet-option selected" style="cursor:default;">
+                <div class="si-name">${tabs[0].title}</div>
+                <div class="si-meta">Otomatik seçildi</div>
+            </div>`;
+            updateStep1Btn();
+            return;
+        }
+        tabItems.innerHTML = tabs.map(t => `
+            <label class="sheet-option" onclick="gsSelectTab('${t.title.replace(/'/g,"\\'")}', this)">
+                <div class="si-name">${t.title}</div>
+                <input type="radio" name="gstab" class="sheet-radio">
+            </label>`).join('');
+    });
+}
+
+function gsSelectTab(title, el) {
+    gsSelectedTab = title;
+    document.querySelectorAll('#gsTabItems .sheet-option').forEach(o=>o.classList.remove('selected'));
     el.classList.add('selected');
     updateStep1Btn();
 }
 
-function loadGsData() {
-    return fetch('/api/import/fetch-sheet', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({url: gsCurrentUrl, sheet_name: gsSelectedSheet})
-    }).then(r=>r.json()).then(data => {
-        if (data.error) throw new Error(data.error);
-        sourceHeaders = data.headers;
-        sourceRows = data.rows;
-        sourceTotal = data.total;
+function gsDisconnect() {
+    fetch('/api/google/disconnect', {method:'POST'}).then(()=>{
+        gsSpreadsheetId=''; gsSelectedTab=null;
+        document.getElementById('gsNotConnected').classList.remove('hidden');
+        document.getElementById('gsConnected').classList.add('hidden');
+        document.getElementById('gsFileList').innerHTML='';
+        document.getElementById('gsTabList').classList.add('hidden');
+        updateStep1Btn();
     });
+}
+
+function loadGsData() {
+    return fetch(`/api/google/sheets/${gsSpreadsheetId}?sheet=${encodeURIComponent(gsSelectedTab)}`)
+        .then(r=>r.json()).then(data => {
+            if (data.error) throw new Error(data.error);
+            sourceHeaders = data.headers;
+            sourceRows = data.rows;
+            sourceTotal = data.total;
+        });
 }
 
 function updateStep1Btn() {
@@ -537,7 +617,7 @@ function updateStep1Btn() {
     if (currentTab === 'file') {
         btn.disabled = sourceHeaders.length === 0;
     } else {
-        btn.disabled = !gsSelectedSheet;
+        btn.disabled = !(gsSpreadsheetId && gsSelectedTab);
     }
 }
 
@@ -554,7 +634,7 @@ function setStep(n) {
 }
 
 async function goStep2() {
-    if (currentTab === 'sheets' && gsSelectedSheet) {
+    if (currentTab === 'sheets' && gsSelectedTab) {
         const btn = document.getElementById('step1Btn');
         btn.disabled = true; btn.textContent = 'Yükleniyor...';
         try { await loadGsData(); }
@@ -673,10 +753,10 @@ function startImport() {
 
 function resetWizard() {
     sourceHeaders=[]; sourceRows=[]; sourceTotal=0;
-    currentTab='file'; gsCurrentUrl=''; gsSelectedSheet=null;
+    currentTab='file'; gsSpreadsheetId=''; gsSelectedTab=null;
     removeFile();
-    document.getElementById('gsUrl').value='';
-    document.getElementById('gsSheetList').innerHTML='';
+    document.getElementById('gsSearch').value='';
+    document.getElementById('gsTabList').classList.add('hidden');
     document.getElementById('gsStatusMsg').innerHTML='';
     setStep(1);
     switchTab('file');
@@ -772,6 +852,22 @@ function copySaEmail2(btn){
 
 // init
 checkExtConnection();
+gsCheckStatus();
+
+// OAuth callback sonucu kontrolü
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('google') === 'connected') {
+        // Google Sheets tabına geç ve başarı göster
+        switchTab('sheets');
+        history.replaceState({}, '', '/external');
+    } else if (params.get('google_error')) {
+        switchTab('sheets');
+        document.getElementById('gsStatusMsg').innerHTML =
+            `<div class="status-msg error" style="margin-top:10px;">Google bağlantısı başarısız: ${params.get('google_error')}</div>`;
+        history.replaceState({}, '', '/external');
+    }
+})();
 </script>
 
 </body>

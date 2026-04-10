@@ -9,7 +9,7 @@ import json
 import threading
 import logging
 import warnings
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, session, make_response
 from flask_socketio import SocketIO
 
 from scraper.maps_scraper import BusinessScraper
@@ -28,6 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger("dashboard")
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "ps-dev-secret-change-in-prod")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # Click Bot entegrasyonu
@@ -1295,6 +1296,178 @@ def import_execute():
         })
     except Exception as e:
         logger.error(f"Import execute hatasi: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────
+#  GOOGLE OAUTH (kullanici kendi hesabiyla baglanir)
+# ─────────────────────────────────────────────────────────────
+
+GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_SCOPES = " ".join([
+    "https://www.googleapis.com/auth/spreadsheets.readonly",
+    "https://www.googleapis.com/auth/drive.metadata.readonly",
+])
+GOOGLE_TOKEN_COOKIE = "google_sheets_token"
+
+
+def _get_google_token():
+    return request.cookies.get(GOOGLE_TOKEN_COOKIE, "")
+
+
+def _redirect_uri():
+    host = request.host_url.rstrip("/")
+    return f"{host}/api/google/callback"
+
+
+@app.route("/api/google/status")
+def google_status():
+    token = _get_google_token()
+    return jsonify({"connected": bool(token)})
+
+
+@app.route("/api/google/connect")
+def google_connect():
+    import secrets, urllib.parse
+    if not GOOGLE_CLIENT_ID:
+        return jsonify({"error": "GOOGLE_CLIENT_ID ayarlanmamis"}), 500
+    state = secrets.token_urlsafe(32)
+    session["google_oauth_state"] = state
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": _redirect_uri(),
+        "response_type": "code",
+        "scope": GOOGLE_SCOPES,
+        "access_type": "offline",
+        "prompt": "consent select_account",
+        "state": state,
+    }
+    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+    return redirect(url)
+
+
+@app.route("/api/google/callback")
+def google_callback():
+    import urllib.parse, urllib.request as ureq
+    error = request.args.get("error")
+    code  = request.args.get("code")
+    state = request.args.get("state")
+    back  = "/external"
+
+    if error or not code:
+        return redirect(back + "?google_error=" + urllib.parse.quote(error or "cancelled"))
+
+    if state != session.pop("google_oauth_state", None):
+        return redirect(back + "?google_error=invalid_state")
+
+    # Token exchange
+    payload = urllib.parse.urlencode({
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": _redirect_uri(),
+        "grant_type": "authorization_code",
+    }).encode()
+    try:
+        req = ureq.Request("https://oauth2.googleapis.com/token", data=payload,
+                           headers={"Content-Type": "application/x-www-form-urlencoded"})
+        with ureq.urlopen(req) as resp:
+            tokens = json.loads(resp.read())
+    except Exception as e:
+        return redirect(back + "?google_error=token_exchange_failed")
+
+    access_token = tokens.get("access_token", "")
+    expires_in   = int(tokens.get("expires_in", 3600))
+
+    if not access_token:
+        return redirect(back + "?google_error=no_access_token")
+
+    resp = make_response(redirect(back + "?google=connected"))
+    resp.set_cookie(GOOGLE_TOKEN_COOKIE, access_token,
+                    httponly=True, samesite="Lax",
+                    max_age=expires_in, secure=request.is_secure)
+    return resp
+
+
+@app.route("/api/google/disconnect", methods=["POST"])
+def google_disconnect():
+    resp = make_response(jsonify({"success": True}))
+    resp.set_cookie(GOOGLE_TOKEN_COOKIE, "", max_age=0)
+    return resp
+
+
+@app.route("/api/google/sheets")
+def google_list_sheets():
+    token = _get_google_token()
+    if not token:
+        return jsonify({"error": "google_not_connected"}), 401
+    q_param = request.args.get("q", "").strip()
+    import urllib.request as ureq, urllib.parse
+    query_parts = [
+        "mimeType='application/vnd.google-apps.spreadsheet'",
+        "trashed=false",
+    ]
+    if q_param:
+        safe = q_param.replace("'", "\\'")
+        query_parts.append(f"name contains '{safe}'")
+    params = urllib.parse.urlencode({
+        "q": " and ".join(query_parts),
+        "fields": "files(id,name,modifiedTime)",
+        "orderBy": "modifiedTime desc",
+        "pageSize": "50",
+    })
+    url = "https://www.googleapis.com/drive/v3/files?" + params
+    req = ureq.Request(url, headers={"Authorization": f"Bearer {token}"})
+    try:
+        with ureq.urlopen(req) as resp:
+            data = json.loads(resp.read())
+        return jsonify({"files": data.get("files", [])})
+    except Exception as e:
+        code = getattr(e, "code", 500)
+        if code == 401:
+            return jsonify({"error": "google_token_expired"}), 401
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/google/sheets/<spreadsheet_id>")
+def google_sheet_data(spreadsheet_id):
+    token = _get_google_token()
+    if not token:
+        return jsonify({"error": "google_not_connected"}), 401
+    sheet_name = request.args.get("sheet", "").strip()
+    import urllib.request as ureq, urllib.parse
+    base = f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}"
+    headers_auth = {"Authorization": f"Bearer {token}"}
+
+    try:
+        if not sheet_name:
+            # Sekmeleri listele
+            req = ureq.Request(f"{base}?fields=sheets.properties(sheetId,title,index)",
+                               headers=headers_auth)
+            with ureq.urlopen(req) as resp:
+                data = json.loads(resp.read())
+            tabs = [{"id": s["properties"]["sheetId"],
+                     "title": s["properties"]["title"],
+                     "index": s["properties"]["index"]}
+                    for s in data.get("sheets", [])]
+            return jsonify({"tabs": tabs})
+        else:
+            # Satir verilerini getir
+            range_enc = urllib.parse.quote(sheet_name)
+            req = ureq.Request(f"{base}/values/{range_enc}", headers=headers_auth)
+            with ureq.urlopen(req) as resp:
+                data = json.loads(resp.read())
+            values = data.get("values", [])
+            if not values:
+                return jsonify({"headers": [], "rows": [], "total": 0})
+            hdrs = [str(h).strip() for h in values[0]]
+            rows = [[str(c) for c in row] for row in values[1:201]]
+            return jsonify({"headers": hdrs, "rows": rows, "total": len(values) - 1})
+    except Exception as e:
+        code = getattr(e, "code", 500)
+        if code == 401:
+            return jsonify({"error": "google_token_expired"}), 401
         return jsonify({"error": str(e)}), 500
 
 
