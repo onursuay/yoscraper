@@ -21,6 +21,8 @@ def get_google_credentials(scopes):
     # Base64 formatini dene (Railway icin onerilen yontem - ozel karakter sorunu yok)
     sa_b64 = os.getenv("GOOGLE_SERVICE_ACCOUNT_B64", "").strip()
     if sa_b64:
+        # Eksik padding'i tamamla
+        sa_b64 += "=" * (-len(sa_b64) % 4)
         sa_info = json.loads(base64.b64decode(sa_b64).decode("utf-8"))
         return Credentials.from_service_account_info(sa_info, scopes=scopes)
 
