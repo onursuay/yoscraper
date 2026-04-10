@@ -513,11 +513,15 @@ function deleteSelectedDb() {
         })
         .then(r => r.json())
         .then(data => {
+            if (data.error) {
+                alert('Silme hatası: ' + data.error);
+            }
             selectAllMode = false;
             document.getElementById('dbCheckAll').checked = false;
             updateDbActions();
             loadData();
-        });
+        })
+        .catch(err => alert('Silme isteği başarısız: ' + err));
     } else {
         alert('Sadece Scanner kayıtları silinebilir. Lead kayıtları kaynak sheet\'ten yönetilmelidir.');
         selectAllMode = false;
