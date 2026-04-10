@@ -15,11 +15,27 @@ SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), "credentials", "s
 
 def get_google_credentials(scopes):
     """Google credentials olustur - env variable veya dosyadan."""
+    import logging
+    _log = logging.getLogger("config")
     from google.oauth2.service_account import Credentials
-    sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+
+    sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip().strip('"').strip("'")
+    _log.info(f"[credentials] GOOGLE_SERVICE_ACCOUNT_JSON uzunluk: {len(sa_json)}, ilk 10 karakter: {repr(sa_json[:10])}")
+
     if sa_json:
-        sa_info = json.loads(sa_json)
-        return Credentials.from_service_account_info(sa_info, scopes=scopes)
+        try:
+            sa_info = json.loads(sa_json)
+            _log.info(f"[credentials] JSON parse başarılı, project_id: {sa_info.get('project_id')}")
+            return Credentials.from_service_account_info(sa_info, scopes=scopes)
+        except json.JSONDecodeError as e:
+            _log.error(f"[credentials] JSON parse hatası: {e}")
+            _log.error(f"[credentials] İlk 50 karakter: {repr(sa_json[:50])}")
+            raise ValueError(
+                f"GOOGLE_SERVICE_ACCOUNT_JSON geçersiz JSON: {e}\n"
+                "Railway Variables'daki değeri kontrol edin — tırnak işareti olmadan tek satır JSON olmalı."
+            )
+
+    _log.warning("[credentials] Env variable yok, dosyadan okunuyor...")
     return Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=scopes)
 
 # Tarama ayarlari
