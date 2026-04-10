@@ -4,14 +4,26 @@ credentials/service_account.json dosyasını oluşturur.
 """
 import os
 import json
+import sys
 
 sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
 
-if sa_json:
-    os.makedirs("credentials", exist_ok=True)
-    with open("credentials/service_account.json", "w") as f:
-        json.dump(json.loads(sa_json), f, indent=2)
-    print("✓ credentials/service_account.json oluşturuldu.")
-else:
-    print("⚠ GOOGLE_SERVICE_ACCOUNT_JSON env variable bulunamadı.")
-    print("  Railway Variables'a ekleyin: GOOGLE_SERVICE_ACCOUNT_JSON = <service_account.json içeriği>")
+print(f"[setup] GOOGLE_SERVICE_ACCOUNT_JSON uzunluk: {len(sa_json)} karakter")
+
+if not sa_json:
+    print("[setup] HATA: GOOGLE_SERVICE_ACCOUNT_JSON env variable boş veya yok!")
+    print("[setup] Railway Variables'a GOOGLE_SERVICE_ACCOUNT_JSON ekleyin.")
+    sys.exit(1)
+
+try:
+    sa_data = json.loads(sa_json)
+except json.JSONDecodeError as e:
+    print(f"[setup] HATA: JSON parse edilemedi: {e}")
+    print(f"[setup] İlk 100 karakter: {sa_json[:100]}")
+    sys.exit(1)
+
+os.makedirs("credentials", exist_ok=True)
+with open("credentials/service_account.json", "w") as f:
+    json.dump(sa_data, f, indent=2)
+
+print(f"[setup] ✓ credentials/service_account.json oluşturuldu. project_id: {sa_data.get('project_id')}")
