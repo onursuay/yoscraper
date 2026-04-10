@@ -14,36 +14,22 @@ SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), "credentials", "s
 
 
 def get_google_credentials(scopes):
-    """Google credentials olustur - env variable veya dosyadan."""
-    import logging
-    _log = logging.getLogger("config")
+    """Google credentials olustur - env variable (base64) veya dosyadan."""
+    import base64
     from google.oauth2.service_account import Credentials
 
-    sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
-    # BOM, görünmez karakterler ve tırnakları temizle
-    sa_json = sa_json.encode("utf-8").decode("utf-8-sig")  # BOM kaldır
-    sa_json = sa_json.strip().strip('"').strip("'").strip()
-    # JSON başlangıcını bul ({ karakterinden itibaren al)
-    brace_idx = sa_json.find("{")
-    if brace_idx > 0:
-        _log.warning(f"[credentials] JSON başından {brace_idx} karakter atlandı: {repr(sa_json[:brace_idx])}")
-        sa_json = sa_json[brace_idx:]
-    _log.info(f"[credentials] GOOGLE_SERVICE_ACCOUNT_JSON uzunluk: {len(sa_json)}, ilk 10 karakter: {repr(sa_json[:10])}")
+    # Base64 formatini dene (Railway icin onerilen yontem - ozel karakter sorunu yok)
+    sa_b64 = os.getenv("GOOGLE_SERVICE_ACCOUNT_B64", "").strip()
+    if sa_b64:
+        sa_info = json.loads(base64.b64decode(sa_b64).decode("utf-8"))
+        return Credentials.from_service_account_info(sa_info, scopes=scopes)
 
+    # Eski JSON formatini dene
+    sa_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
     if sa_json:
-        try:
-            sa_info = json.loads(sa_json)
-            _log.info(f"[credentials] JSON parse başarılı, project_id: {sa_info.get('project_id')}")
-            return Credentials.from_service_account_info(sa_info, scopes=scopes)
-        except json.JSONDecodeError as e:
-            _log.error(f"[credentials] JSON parse hatası: {e}")
-            _log.error(f"[credentials] İlk 50 karakter: {repr(sa_json[:50])}")
-            raise ValueError(
-                f"GOOGLE_SERVICE_ACCOUNT_JSON geçersiz JSON: {e}\n"
-                "Railway Variables'daki değeri kontrol edin — tırnak işareti olmadan tek satır JSON olmalı."
-            )
+        sa_info = json.loads(sa_json)
+        return Credentials.from_service_account_info(sa_info, scopes=scopes)
 
-    _log.warning("[credentials] Env variable yok, dosyadan okunuyor...")
     return Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=scopes)
 
 # Tarama ayarlari
