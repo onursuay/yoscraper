@@ -51,11 +51,14 @@ class SheetsManager:
             logger.error(f"'{SHEET_NAME}' sayfasi bulunamadi! Lutfen olusturun.")
             raise
         except FileNotFoundError:
-            logger.error(
-                f"Service account dosyasi bulunamadi: {SERVICE_ACCOUNT_FILE}\n"
-                "Google Cloud Console'dan service account olusturup JSON anahtarini indirin."
+            msg = (
+                "Google credentials bulunamadı!\n"
+                "Railway Variables'a şu değişkeni ekleyin:\n"
+                "  GOOGLE_SERVICE_ACCOUNT_JSON = <service_account.json içeriği>\n"
+                f"(Dosya yolu: {SERVICE_ACCOUNT_FILE})"
             )
-            raise
+            logger.error(msg)
+            raise FileNotFoundError(msg)
 
     def _ensure_headers(self):
         """Ilk satirdaki basliklari kontrol et, yoksa ekle."""
