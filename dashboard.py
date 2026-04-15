@@ -1060,7 +1060,6 @@ def get_database():
 
 
 @app.route("/api/database/columns")
-@login_required
 def database_columns():
     """Scanner tablosunun gercek baslik satirini dondur."""
     try:
