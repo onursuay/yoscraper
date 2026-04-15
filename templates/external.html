@@ -357,23 +357,23 @@ let gsSpreadsheetId = '';
 let gsSelectedTab = null;
 let gsSearchTimer = null;
 
-// CRM fields (Scanner columns)
-const CRM_FIELDS = [
-    { key: 'Tarih',     label: 'Tarih',      required: false },
-    { key: 'Sektör',    label: 'Sektör',     required: false },
-    { key: 'Firma Adı', label: 'Firma Adı',  required: true  },
-    { key: 'Telefon',   label: 'Telefon',    required: false },
-    { key: 'E-posta',   label: 'E-posta',    required: false },
-    { key: 'Domain',    label: 'Domain',     required: false },
-    { key: 'Web Sitesi',label: 'Web Sitesi', required: false },
-    { key: 'Instagram', label: 'Instagram',  required: false },
-    { key: 'Facebook',  label: 'Facebook',   required: false },
-    { key: 'LinkedIn',  label: 'LinkedIn',   required: false },
-];
+// DB columns — loaded dynamically from /api/database/columns
+let dbColumns = [];
+
+const DB_COL_EN = {
+    'Tarih': 'Date', 'Sektör': 'Sector', 'Firma Adı': 'Company Name',
+    'Telefon': 'Phone', 'E-posta': 'Email', 'Domain': 'Domain',
+    'Web Sitesi': 'Website', 'Instagram': 'Instagram',
+    'Facebook': 'Facebook', 'LinkedIn': 'LinkedIn'
+};
+
+function dbColLabel(col) {
+    return window.APP_LANG === 'en' ? (DB_COL_EN[col] || col) : col;
+}
 
 const AUTO_MAP = {
     'Tarih':      ['tarih','date','kayit tarihi','tarih/saat','created_at','created at'],
-    'Sektör':     ['sektor','sektör','sector','sektör','kategori','category','industry','alan'],
+    'Sektör':     ['sektor','sektör','sector','kategori','category','industry','alan'],
     'Firma Adı':  ['firma','firma adi','firma adı','company','name','isim','sirket','şirket','işletme','business','ad','unvan'],
     'Telefon':    ['telefon','tel','phone','gsm','cep','mobil','mobile','phone number'],
     'E-posta':    ['e-posta','eposta','email','mail','e-mail','e_posta','email address'],
@@ -394,17 +394,28 @@ function normalize(s) {
 function autoMap() {
     const mapping = {};
     const normHeaders = sourceHeaders.map(normalize);
-    for (const field of CRM_FIELDS) {
-        const aliases = (AUTO_MAP[field.key] || []).map(normalize);
+    for (const col of dbColumns) {
+        const normCol = normalize(col);
+        const aliases = (AUTO_MAP[col] || []).map(normalize);
         for (let i = 0; i < normHeaders.length; i++) {
             const nh = normHeaders[i];
-            if (aliases.includes(nh) || aliases.some(a => nh.includes(a) || a.includes(nh))) {
-                mapping[field.key] = sourceHeaders[i];
+            if (nh === normCol || aliases.includes(nh) || aliases.some(a => nh.includes(a) || a.includes(nh))) {
+                mapping[col] = sourceHeaders[i];
                 break;
             }
         }
     }
     return mapping;
+}
+
+// Load DB columns from backend on startup
+function loadDbColumns() {
+    fetch('/api/database/columns')
+        .then(r => r.json())
+        .then(data => { if (data.columns && data.columns.length) dbColumns = data.columns; })
+        .catch(() => {
+            dbColumns = ['Tarih','Sektör','Firma Adı','Telefon','E-posta','Domain','Web Sitesi','Instagram','Facebook','LinkedIn'];
+        });
 }
 
 // ─── TABS ─────────────────────────────────────────────────────────────────
@@ -582,7 +593,7 @@ function updateStep1Btn() {
     }
 }
 
-// ─── STEP NAVIGATION ──────────────────────────────────────────────────────
+// ─── STEP NAVIGATION (must be before goStep2 which calls buildMapTable) ────
 function setStep(n) {
     [1,2,3,4].forEach(i => {
         document.getElementById('step'+i).classList.toggle('hidden', i!==n);
@@ -609,48 +620,32 @@ async function goStep2() {
 
 function goStep1() { setStep(1); }
 
-// CRM field label — EN veya TR döndürür
-const CRM_FIELD_EN = {
-    'Tarih': 'Date', 'Sektör': 'Sector', 'Firma Adı': 'Company Name',
-    'Telefon': 'Phone', 'E-posta': 'Email', 'Domain': 'Domain',
-    'Web Sitesi': 'Website', 'Instagram': 'Instagram',
-    'Facebook': 'Facebook', 'LinkedIn': 'LinkedIn'
-};
-function crmLabel(field) {
-    return window.APP_LANG === 'en'
-        ? (CRM_FIELD_EN[field.key] || field.label)
-        : field.label;
-}
-
 function buildMapTable() {
-    // autoMap() → { crmFieldKey: sourceColName }
-    // Tersine çevir → { sourceColName: crmFieldKey }
-    const crmToSource = autoMap();
-    const sourceToCrm = {};
-    Object.entries(crmToSource).forEach(([crmKey, srcCol]) => {
-        sourceToCrm[srcCol] = crmKey;
+    // autoMap() → { dbColName: sourceColName }
+    // Reverse → { sourceColName: dbColName }
+    const dbToSource = autoMap();
+    const sourceToDB = {};
+    Object.entries(dbToSource).forEach(([dbCol, srcCol]) => {
+        sourceToDB[srcCol] = dbCol;
     });
 
     let autoCount = 0;
     const tbody = document.getElementById('mapRows');
 
-    // Her kaynak sütun için bir satır (dinamik, sheet başlıklarına göre)
     tbody.innerHTML = sourceHeaders.map(header => {
-        const autoField = sourceToCrm[header] || '';
+        const autoField = sourceToDB[header] || '';
         if (autoField) autoCount++;
 
-        // Bu sütundan örnek değerler
         const colIdx = sourceHeaders.indexOf(header);
         const samples = sourceRows.slice(0, 3)
             .map(r => r[colIdx] || '')
             .filter(Boolean)
             .join(' · ');
 
-        // Sağ taraf: database alanı seçimi
         const options = [
             `<option value="">— ${t('ext-skip','Atla')} —</option>`,
-            ...CRM_FIELDS.map(f =>
-                `<option value="${f.key}"${f.key === autoField ? ' selected' : ''}>${crmLabel(f)}${f.required ? ' *' : ''}</option>`
+            ...dbColumns.map(col =>
+                `<option value="${col}"${col === autoField ? ' selected' : ''}>${dbColLabel(col)}</option>`
             )
         ].join('');
 
@@ -673,14 +668,14 @@ function buildMapTable() {
     badge.textContent = `✓ ${autoCount}/${sourceHeaders.length} ${t('ext-auto-match','otomatik eşleşti')}`;
 }
 
-// Döndürür: { crmFieldKey: sourceColName } — import kodu bu formatı beklediği için aynı kaldı
+// Returns { dbColName: sourceColName } — matches what import_execute expects
 function getMapping() {
     const m = {};
     document.querySelectorAll('#mapRows select').forEach(sel => {
-        const crmField = sel.value;
+        const dbCol = sel.value;
         const sourceCol = sel.dataset.source;
-        if (crmField && sourceCol) {
-            m[crmField] = sourceCol;  // crmField → sourceCol
+        if (dbCol && sourceCol) {
+            m[dbCol] = sourceCol;
         }
     });
     return m;
@@ -688,9 +683,8 @@ function getMapping() {
 
 function goStep3() {
     const mapping = getMapping();
-    const mappedCrmFields = Object.keys(mapping);
-    if (!mappedCrmFields.includes('Firma Adı') && !mappedCrmFields.includes('E-posta')) {
-        alert(t('ext-map-required','En az Firma Adı veya E-posta eşleştirilmeli.'));
+    if (Object.keys(mapping).length === 0) {
+        alert(t('ext-map-required','En az bir sütun eşleştirilmeli.'));
         return;
     }
     buildPreview(mapping);
@@ -776,6 +770,7 @@ function resetWizard() {
 }
 
 // init
+loadDbColumns();
 gsCheckStatus();
 
 // OAuth callback sonucu kontrolü

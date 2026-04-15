@@ -1059,6 +1059,27 @@ def get_database():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/database/columns")
+@login_required
+def database_columns():
+    """Scanner tablosunun gercek baslik satirini dondur."""
+    try:
+        from config import SHEET_COLUMNS
+        sheets = SheetsManager()
+        first_row = sheets.worksheet.row_values(1)
+        columns = [c.strip() for c in first_row if c.strip()] if first_row else []
+        if not columns:
+            columns = list(SHEET_COLUMNS)
+        return jsonify({"columns": columns})
+    except Exception as e:
+        logger.error(f"Database columns hatasi: {e}")
+        try:
+            from config import SHEET_COLUMNS
+            return jsonify({"columns": list(SHEET_COLUMNS)})
+        except Exception:
+            return jsonify({"columns": ["Tarih", "Sektör", "Firma Adı", "Telefon", "E-posta", "Domain", "Web Sitesi", "Instagram", "Facebook", "LinkedIn"]})
+
+
 def _fetch_lead_sheet(sheets_mgr, lead_url: str, sheet_name: str = None) -> list:
     """Harici lead sheet'inden SADECE secilen sheet'in verilerini cek.
 

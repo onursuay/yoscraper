@@ -115,7 +115,7 @@
             'ext-loading':      'Loading...',
             'ext-skip':         'Skip',
             'ext-auto-match':   'auto-matched',
-            'ext-map-required': 'At least Company Name or Email must be mapped.',
+            'ext-map-required': 'At least one column must be mapped.',
             'ext-preview-meta': 'Showing first 10 rows',
             'ext-total':        'Total',
             'ext-gs-fail':      'Google connection failed',
