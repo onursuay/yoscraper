@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python setup_credentials.py && python dashboard.py",
+    "startCommand": "playwright install chromium --with-deps && python setup_credentials.py && python dashboard.py",
     "restartPolicyType": "ON_FAILURE"
   }
 }
