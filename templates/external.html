@@ -242,7 +242,7 @@
 
                     <!-- Sekme listesi -->
                     <div id="gsTabList" class="hidden" style="margin-top:12px;">
-                        <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Sekme seçin:</div>
+                        <div style="font-size:12px;color:#64748b;margin-bottom:8px;" data-i18n="gs-sel-tab">Sekme seçin:</div>
                         <div id="gsTabItems"></div>
                     </div>
 
@@ -288,7 +288,7 @@
         <!-- ── STEP 3: Önizleme ── -->
         <div id="step3" class="hidden">
             <div style="margin-bottom:16px;">
-                <div style="font-size:15px; font-weight:700; color:#f1f5f9; margin-bottom:3px;">Önizleme</div>
+                <div style="font-size:15px; font-weight:700; color:#f1f5f9; margin-bottom:3px;" data-i18n="step-preview">Önizleme</div>
                 <div style="font-size:12px; color:#64748b;" id="previewMeta"></div>
             </div>
             <div class="preview-wrap">
@@ -298,7 +298,7 @@
                 </table>
             </div>
             <div class="btn-row">
-                <button class="btn btn-outline" onclick="goStep2()" data-i18n="back-btn">← Geri</button>
+                <button class="btn btn-outline" onclick="goBackToStep2()" data-i18n="back-btn">← Geri</button>
                 <div class="spacer"></div>
                 <button class="btn btn-primary" onclick="startImport()" data-i18n="import-btn">İçe Aktarmayı Başlat</button>
             </div>
@@ -449,11 +449,11 @@ function processFile(file) {
             const fi = document.getElementById('fileInfo');
             fi.classList.remove('hidden');
             document.getElementById('fileInfoName').textContent = file.name;
-            document.getElementById('fileInfoMeta').textContent = `${sourceTotal.toLocaleString()} satır · ${sourceHeaders.length} sütun`;
+            document.getElementById('fileInfoMeta').textContent = `${sourceTotal.toLocaleString()} ${t('ext-rows','satır')} · ${sourceHeaders.length} ${t('ext-cols','sütun')}`;
             showParseMsg('', '');
             updateStep1Btn();
         })
-        .catch(e => { showParseMsg('Dosya okunamadı: ' + e.message, 'error'); resetUploadUI(); });
+        .catch(e => { showParseMsg(t('ext-read-err','Dosya okunamadı: ') + e.message, 'error'); resetUploadUI(); });
 }
 
 function removeFile() {
@@ -493,14 +493,15 @@ function gsLoadFiles(q='') {
         const files = data.files || [];
         const el = document.getElementById('gsFileList');
         if (!files.length) {
-            el.innerHTML = '<div style="font-size:13px;color:#64748b;padding:12px 0;">Dosya bulunamadı.</div>';
+            el.innerHTML = `<div style="font-size:13px;color:#64748b;padding:12px 0;">${t('ext-no-files','Dosya bulunamadı.')}</div>`;
             return;
         }
+        const dateLoc = window.APP_LANG === 'en' ? 'en-US' : 'tr-TR';
         el.innerHTML = files.map(f => `
             <label class="sheet-option" onclick="gsSelectFile('${f.id}', '${f.name.replace(/'/g,"\\'").replace(/"/g,"&quot;")}', this)">
                 <div>
                     <div class="si-name">${f.name}</div>
-                    <div class="si-meta">${new Date(f.modifiedTime).toLocaleDateString('tr-TR')}</div>
+                    <div class="si-meta">${new Date(f.modifiedTime).toLocaleDateString(dateLoc)}</div>
                 </div>
                 <input type="radio" name="gsfile" class="sheet-radio">
             </label>`).join('');
@@ -523,16 +524,15 @@ function gsSelectFile(id, name, el) {
     const tabList = document.getElementById('gsTabList');
     const tabItems = document.getElementById('gsTabItems');
     tabList.classList.remove('hidden');
-    tabItems.innerHTML = '<div style="font-size:12px;color:#64748b;">Yükleniyor...</div>';
+    tabItems.innerHTML = `<div style="font-size:12px;color:#64748b;">${t('ext-loading','Yükleniyor...')}</div>`;
 
     fetch(`/api/google/sheets/${id}`).then(r=>r.json()).then(data => {
         const tabs = data.tabs || [];
         if (tabs.length === 1) {
-            // Tek sekme varsa otomatik seç
             gsSelectedTab = tabs[0].title;
             tabItems.innerHTML = `<div class="sheet-option selected" style="cursor:default;">
                 <div class="si-name">${tabs[0].title}</div>
-                <div class="si-meta">Otomatik seçildi</div>
+                <div class="si-meta">${t('gs-auto-sel','Otomatik seçildi')}</div>
             </div>`;
             updateStep1Btn();
             return;
@@ -597,11 +597,11 @@ function setStep(n) {
 async function goStep2() {
     if (currentTab === 'sheets' && gsSelectedTab) {
         const btn = document.getElementById('step1Btn');
-        btn.disabled = true; btn.textContent = 'Yükleniyor...';
+        btn.disabled = true; btn.textContent = t('ext-loading','Yükleniyor...');
         try { await loadGsData(); }
-        catch(e) { btn.disabled=false; btn.textContent='Devam →';
+        catch(e) { btn.disabled=false; btn.textContent=t('next-btn','Devam →');
             document.getElementById('gsStatusMsg').innerHTML=`<div class="status-msg error" style="margin-top:10px;">${e.message}</div>`; return; }
-        btn.disabled=false; btn.textContent='Devam →';
+        btn.disabled=false; btn.textContent=t('next-btn','Devam →');
     }
     buildMapTable();
     setStep(2);
@@ -620,7 +620,7 @@ function buildMapTable() {
         const samples = sampleIdx >= 0
             ? sourceRows.slice(0,3).map(r => r[sampleIdx] || '').filter(Boolean).join(' · ')
             : '';
-        const options = ['<option value="">— Atla —</option>',
+        const options = [`<option value="">— ${t('ext-skip','Atla')} —</option>`,
             ...sourceHeaders.map(h => `<option value="${h}"${h===autoVal?' selected':''}>${h}</option>`)
         ].join('');
         return `<tr>
@@ -632,7 +632,7 @@ function buildMapTable() {
         </tr>`;
     }).join('');
     const badge = document.getElementById('autoMapBadge');
-    badge.textContent = `✓ ${autoCount}/${CRM_FIELDS.length} otomatik eşleşti`;
+    badge.textContent = `✓ ${autoCount}/${CRM_FIELDS.length} ${t('ext-auto-match','otomatik eşleşti')}`;
 }
 
 function getMapping() {
@@ -647,7 +647,7 @@ function goStep3() {
     const mapping = getMapping();
     const mapped = Object.keys(mapping);
     if (!mapped.includes('Firma Adı') && !mapped.includes('E-posta')) {
-        alert('En az Firma Adı veya E-posta eşleştirilmeli.');
+        alert(t('ext-map-required','En az Firma Adı veya E-posta eşleştirilmeli.'));
         return;
     }
     buildPreview(mapping);
@@ -656,7 +656,7 @@ function goStep3() {
 
 function buildPreview(mapping) {
     const fields = Object.keys(mapping);
-    document.getElementById('previewMeta').textContent = `İlk 10 satır gösteriliyor · Toplam ${sourceTotal.toLocaleString()} satır`;
+    document.getElementById('previewMeta').textContent = `${t('ext-preview-meta','İlk 10 satır gösteriliyor')} · ${t('ext-total','Toplam')} ${sourceTotal.toLocaleString()} ${t('ext-rows','satır')}`;
     document.getElementById('previewHead').innerHTML = `<tr>${fields.map(f=>`<th>${f}</th>`).join('')}</tr>`;
     const rows = sourceRows.slice(0,10);
     document.getElementById('previewBody').innerHTML = rows.map(row => {
@@ -668,7 +668,8 @@ function buildPreview(mapping) {
     }).join('');
 }
 
-function goStep2() {
+// goStep2 is defined above (async) — this back-only version is for step3 → step2
+function goBackToStep2() {
     buildMapTable();
     setStep(2);
 }
@@ -736,7 +737,7 @@ gsCheckStatus();
     } else if (params.get('google_error')) {
         switchTab('sheets');
         document.getElementById('gsStatusMsg').innerHTML =
-            `<div class="status-msg error" style="margin-top:10px;">Google bağlantısı başarısız: ${params.get('google_error')}</div>`;
+            `<div class="status-msg error" style="margin-top:10px;">${t('ext-gs-fail','Google bağlantısı başarısız')}: ${params.get('google_error')}</div>`;
         history.replaceState({}, '', '/external');
     }
 })();

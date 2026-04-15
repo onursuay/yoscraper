@@ -105,6 +105,21 @@
             'import-failed':     'Import failed',
             'retry-btn':         'Retry',
 
+            // ── IMPORT WIZARD – JS dynamic strings ──
+            'ext-fmt-err':      'Unsupported format. Use .xlsx, .xls or .csv.',
+            'parsing':          'Parsing...',
+            'ext-rows':         'rows',
+            'ext-cols':         'columns',
+            'ext-read-err':     'Could not read file: ',
+            'ext-no-files':     'No files found.',
+            'ext-loading':      'Loading...',
+            'ext-skip':         'Skip',
+            'ext-auto-match':   'auto-matched',
+            'ext-map-required': 'At least Company Name or Email must be mapped.',
+            'ext-preview-meta': 'Showing first 10 rows',
+            'ext-total':        'Total',
+            'ext-gs-fail':      'Google connection failed',
+
             // ── DATABASE ──
             'db-search-ph':  'Search company, email, domain...',
             'all-sources':   'All Sources',
