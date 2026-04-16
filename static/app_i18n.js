@@ -85,7 +85,7 @@
             'gs-connected-lbl':  'Google account connected',
             'gs-disc-btn':       'Disconnect',
             'gs-search-ph':      'Search file...',
-            'gs-sel-tab':        'Select sheet:',
+            'gs-sel-tab':        'Select Sheet',
             'gs-auto-sel':       'Auto-selected',
             'next-btn':          'Continue →',
             'map-title':         'Column Mapping',
