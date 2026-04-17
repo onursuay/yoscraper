@@ -10,196 +10,341 @@
 <body>
 {% include 'header.html' %}
 
+{% set name_parts = user.full_name.strip().split(' ', 1) %}
+{% set first_name = name_parts[0] %}
+{% set last_name  = name_parts[1] if name_parts|length > 1 else '' %}
+{% set referral_code = user.id[:8].upper() %}
+{% set referral_link = 'https://scraper.yodijital.com/?ref=' + referral_code %}
+
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #0b1120; color: #f1f5f9; min-height: 100vh; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f1f5f9; color: #0f172a; min-height: 100vh; }
 
-.acc-page { max-width: 720px; margin: 0 auto; padding: 48px 24px 120px; }
-.acc-title { font-size: 22px; font-weight: 700; color: #f1f5f9; margin-bottom: 32px; display: flex; align-items: center; gap: 10px; }
-.acc-title svg { color: #64748b; }
+.acc-wrapper { max-width: 960px; margin: 0 auto; padding: 36px 24px 100px; }
 
-.acc-card {
-    background: #111827; border: 1px solid #1e293b;
-    border-radius: 16px; margin-bottom: 20px; overflow: hidden;
+/* Page title */
+.acc-page-title {
+    font-size: 20px; font-weight: 700; color: #0f172a;
+    margin-bottom: 24px; display: flex; align-items: center; gap: 10px;
 }
-.acc-card-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 24px 16px; border-bottom: 1px solid #1e293b;
-}
-.acc-card-head h2 { font-size: 15px; font-weight: 600; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
-.acc-card-head h2 svg { color: #64748b; }
-.acc-card-body { padding: 24px; }
 
-/* Profile avatar row */
-.profile-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
-.profile-av-lg {
-    width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
-    background: linear-gradient(135deg, #10b981, #0891b2);
+/* Cards */
+.card {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 16px; padding: 24px;
+}
+.card-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 20px; }
+
+/* Top grid: profile + password */
+.top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+@media (max-width: 640px) { .top-grid { grid-template-columns: 1fr; } }
+
+/* Avatar row */
+.avatar-row { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.avatar-circle {
+    width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+    background: #d1fae5; color: #059669;
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px; font-weight: 700; color: #fff;
+    font-size: 20px; font-weight: 700;
 }
-.profile-av-info .name { font-size: 18px; font-weight: 700; color: #f1f5f9; }
-.profile-av-info .email { font-size: 13px; color: #64748b; margin-top: 3px; }
-.profile-av-info .joined { font-size: 12px; color: #475569; margin-top: 4px; }
+.avatar-info { flex: 1; }
+.avatar-info .av-label { font-size: 14px; font-weight: 500; color: #0f172a; }
+.avatar-info .av-sub   { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+.upload-btn {
+    margin-left: auto; padding: 6px 14px;
+    font-size: 13px; font-weight: 500; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 8px;
+    background: #fff; cursor: pointer; transition: background 0.15s;
+    white-space: nowrap; font-family: inherit;
+}
+.upload-btn:hover { background: #f9fafb; }
 
-/* Form */
-.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 540px) { .form-grid-2 { grid-template-columns: 1fr; } }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field label { font-size: 13px; font-weight: 500; color: #94a3b8; }
-.field input, .field input[readonly] {
-    background: #0b1120; border: 1px solid #1e293b; border-radius: 10px;
-    padding: 10px 14px; font-size: 14px; color: #f1f5f9; font-family: inherit;
+/* Name grid */
+.name-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+
+/* Fields */
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 14px; font-weight: 500; color: #4b5563; margin-bottom: 6px; }
+.field input {
+    width: 100%; padding: 9px 12px; font-size: 14px; font-family: inherit;
+    border: 1px solid #d1d5db; border-radius: 8px; background: #fff; color: #111827;
     outline: none; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.field input[readonly] { color: #64748b; cursor: default; }
-.field input:not([readonly]):focus {
-    border-color: rgba(16,185,129,0.5);
-    box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
-}
-.field-full { grid-column: 1 / -1; }
+.field input::placeholder { color: #9ca3af; }
+.field input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+.field input[readonly] { background: #f9fafb; color: #6b7280; cursor: default; }
+.field input[readonly]:focus { border-color: #d1d5db; box-shadow: none; }
 
-.toast {
-    display: none; padding: 10px 16px; border-radius: 10px; font-size: 13px;
-    font-weight: 500; margin-top: 16px;
+/* Password field with eye */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 40px; }
+.pw-eye {
+    position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: #9ca3af;
+    display: flex; align-items: center; padding: 2px;
+    transition: color 0.15s;
 }
-.toast.success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
-.toast.error   { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.25); color: #f87171; }
+.pw-eye:hover { color: #4b5563; }
 
-.save-btn {
-    display: inline-flex; align-items: center; gap: 7px;
-    background: linear-gradient(90deg, #10b981, #14b8a6);
-    border: none; border-radius: 10px; padding: 10px 22px;
-    font-size: 14px; font-weight: 600; color: #000; cursor: pointer;
-    font-family: inherit; transition: opacity 0.2s; margin-top: 20px;
+/* Toggle row */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.toggle-row label { font-size: 14px; color: #374151; }
+.toggle-switch { position: relative; width: 40px; height: 22px; cursor: pointer; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+    position: absolute; inset: 0; background: #d1d5db;
+    border-radius: 11px; transition: background 0.2s;
 }
-.save-btn:hover { opacity: 0.9; }
-.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.toggle-switch input:checked + .toggle-track { background: #059669; }
+.toggle-knob {
+    position: absolute; top: 3px; left: 3px;
+    width: 16px; height: 16px; background: #fff;
+    border-radius: 50%; transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked ~ .toggle-knob { transform: translateX(18px); }
 
-.danger-zone { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.danger-zone p { font-size: 13px; color: #64748b; }
-.danger-zone p strong { color: #e2e8f0; }
+/* Emerald button */
+.em-btn {
+    width: 100%; padding: 10px 16px; font-size: 14px; font-weight: 500;
+    font-family: inherit; border: none; border-radius: 8px; cursor: pointer;
+    background: #059669; color: #fff; transition: background 0.15s;
+}
+.em-btn:hover { background: #047857; }
+.em-btn.saved { background: #047857; }
+.em-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Toast */
+.field-toast { font-size: 13px; margin-top: 8px; display: none; }
+.field-toast.error   { color: #ef4444; }
+.field-toast.success { color: #10b981; }
+
+/* ── Referral section ── */
+.referral-card {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border: 1px solid #a7f3d0;
+    border-radius: 16px; padding: 24px;
+}
+.referral-title {
+    text-align: center; font-size: 18px; font-weight: 700;
+    color: #0f172a; margin-bottom: 24px;
+}
+.referral-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 640px) { .referral-grid { grid-template-columns: 1fr; } }
+
+.ref-section-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.ref-section-sub   { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+
+.copy-row { display: flex; gap: 8px; }
+.copy-row input {
+    flex: 1; padding: 9px 12px; font-size: 13px; font-family: inherit;
+    border: 1px solid #d1d5db; border-radius: 8px; background: #fff;
+    color: #374151; outline: none;
+}
+.copy-btn {
+    display: flex; align-items: center; gap: 6px; padding: 9px 14px;
+    font-size: 13px; font-weight: 500; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 8px; background: #fff;
+    cursor: pointer; transition: background 0.15s; white-space: nowrap; font-family: inherit;
+}
+.copy-btn:hover { background: #f9fafb; }
+.copy-btn.copied { color: #059669; border-color: #a7f3d0; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.stat-box {
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 12px; padding: 16px; text-align: center;
+}
+.stat-box svg { color: #9ca3af; margin: 0 auto 8px; display: block; }
+.stat-box .stat-label { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+.stat-box .stat-val   { font-size: 26px; font-weight: 700; color: #0f172a; }
 </style>
 
-<div class="acc-page">
-    <div class="acc-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Hesabım
-    </div>
+<div class="acc-wrapper">
 
-    <!-- Profile card -->
-    <div class="acc-card">
-        <div class="acc-card-head">
-            <h2>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                Profil Bilgileri
-            </h2>
-        </div>
-        <div class="acc-card-body">
-            <div class="profile-hero">
-                <div class="profile-av-lg">{{ user.initials }}</div>
-                <div class="profile-av-info">
-                    <div class="name">{{ user.full_name }}</div>
-                    <div class="email">{{ user.email }}</div>
-                    {% if user.created_at %}
-                    <div class="joined">Katılım: {{ user.created_at[:10] }}</div>
-                    {% endif %}
+    <!-- Top grid: Profile + Password -->
+    <div class="top-grid">
+
+        <!-- Profile Card -->
+        <div class="card">
+            <div class="card-title">Profil Bilgileri</div>
+
+            <div class="avatar-row">
+                <div class="avatar-circle" id="avatarCircle">{{ user.initials }}</div>
+                <div class="avatar-info">
+                    <div class="av-label">Profil Fotoğrafı</div>
+                    <div class="av-sub">Maks 5 MB</div>
                 </div>
+                <button class="upload-btn" type="button">Fotoğraf Yükle</button>
             </div>
 
             <form id="profileForm">
-                <div class="form-grid-2">
-                    <div class="field field-full">
-                        <label>E-posta</label>
-                        <input type="email" value="{{ user.email }}" readonly>
+                <div class="name-grid">
+                    <div class="field" style="margin-bottom:0;">
+                        <label>Ad</label>
+                        <input type="text" id="firstName" value="{{ first_name }}" placeholder="Ad" maxlength="60">
                     </div>
-                    <div class="field field-full">
-                        <label>Ad Soyad</label>
-                        <input type="text" id="fullName" value="{{ user.full_name }}" placeholder="Ad Soyad" maxlength="80">
-                    </div>
-                    <div class="field">
-                        <label>Şirket</label>
-                        <input type="text" id="company" value="{{ user.company or '' }}" placeholder="Şirket adı">
-                    </div>
-                    <div class="field">
-                        <label>Telefon</label>
-                        <input type="tel" id="phone" value="{{ user.phone or '' }}" placeholder="+90 555 000 00 00">
+                    <div class="field" style="margin-bottom:0;">
+                        <label>Soyad</label>
+                        <input type="text" id="lastName" value="{{ last_name }}" placeholder="Soyad" maxlength="60">
                     </div>
                 </div>
-                <div class="toast" id="profileToast"></div>
-                <button type="submit" class="save-btn" id="profileBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                    Kaydet
-                </button>
+
+                <div class="field" style="margin-top:16px;">
+                    <label>E-posta</label>
+                    <input type="email" value="{{ user.email }}" readonly>
+                </div>
+
+                <div class="toggle-row">
+                    <label>Yardım Erişimine İzin Ver</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="helpToggle">
+                        <span class="toggle-track"></span>
+                        <span class="toggle-knob"></span>
+                    </label>
+                </div>
+
+                <div class="field-toast" id="profileToast"></div>
+                <button type="submit" class="em-btn" id="profileBtn">Kaydet</button>
             </form>
         </div>
-    </div>
 
-    <!-- Password card -->
-    <div class="acc-card">
-        <div class="acc-card-head">
-            <h2>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                Şifre Değiştir
-            </h2>
-        </div>
-        <div class="acc-card-body">
+        <!-- Password Card -->
+        <div class="card">
             <form id="passwordForm">
-                <div class="form-grid-2">
-                    <div class="field field-full">
-                        <label>Mevcut Şifre</label>
-                        <input type="password" id="curPw" placeholder="Mevcut şifreniz" autocomplete="current-password">
-                    </div>
-                    <div class="field">
-                        <label>Yeni Şifre</label>
-                        <input type="password" id="newPw" placeholder="En az 8 karakter" autocomplete="new-password">
-                    </div>
-                    <div class="field">
-                        <label>Yeni Şifre Tekrar</label>
-                        <input type="password" id="newPw2" placeholder="Yeni şifrenizi tekrar girin" autocomplete="new-password">
+                <div class="field">
+                    <label>Şifre Değiştir</label>
+                    <div class="pw-wrap">
+                        <input type="password" id="curPw" placeholder="Mevcut şifre" autocomplete="current-password">
+                        <button type="button" class="pw-eye" onclick="togglePw('curPw',this)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
                     </div>
                 </div>
-                <div class="toast" id="pwToast"></div>
-                <button type="submit" class="save-btn" id="pwBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                    Şifreyi Güncelle
-                </button>
+
+                <div class="field">
+                    <label>Yeni Şifre</label>
+                    <div class="pw-wrap">
+                        <input type="password" id="newPw" placeholder="Yeni şifre" autocomplete="new-password">
+                        <button type="button" class="pw-eye" onclick="togglePw('newPw',this)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Şifre Tekrar</label>
+                    <div class="pw-wrap">
+                        <input type="password" id="confirmPw" placeholder="Şifreyi tekrar girin" autocomplete="new-password">
+                        <button type="button" class="pw-eye" onclick="togglePw('confirmPw',this)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="field-toast" id="pwToast"></div>
+                <button type="submit" class="em-btn" id="pwBtn">Şifreyi Güncelle</button>
             </form>
         </div>
+
     </div>
 
-    <!-- Session card -->
-    <div class="acc-card">
-        <div class="acc-card-head">
-            <h2>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Oturum
-            </h2>
-        </div>
-        <div class="acc-card-body">
-            <div class="danger-zone">
-                <p><strong>Oturumu Kapat</strong><br>Hesabınızdan güvenli şekilde çıkış yapın.</p>
-                <a href="/logout" class="save-btn" style="background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);text-decoration:none;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    Çıkış Yap
-                </a>
+    <!-- Referral Section -->
+    <div class="referral-card">
+        <div class="referral-title">Referans &amp; Kazanç</div>
+
+        <div class="referral-grid">
+            <!-- Left: code + link -->
+            <div>
+                <div class="ref-section-title">Referans Bilgisi</div>
+                <div class="ref-section-sub">Arkadaşlarını davet et, her ikisi de indirim kazan.</div>
+
+                <div class="field">
+                    <label>Referans Kodunuz</label>
+                    <div class="copy-row">
+                        <input type="text" value="{{ referral_code }}" readonly id="refCode">
+                        <button type="button" class="copy-btn" id="copyCodeBtn" onclick="doCopy('refCode','copyCodeBtn')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            Kodu Kopyala
+                        </button>
+                    </div>
+                </div>
+
+                <div class="field" style="margin-bottom:0;">
+                    <label>Referans Linkiniz</label>
+                    <div class="copy-row">
+                        <input type="text" value="{{ referral_link }}" readonly id="refLink" style="font-size:12px;">
+                        <button type="button" class="copy-btn" id="copyLinkBtn" onclick="doCopy('refLink','copyLinkBtn')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            Kopyala
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: stats -->
+            <div>
+                <div class="ref-section-title">Kazançlarım</div>
+                <div class="ref-section-sub">Davet ettiğin her kullanıcı için indirim kazanırsın.</div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                        <div class="stat-label">Referanslar</div>
+                        <div class="stat-val">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
+                        <div class="stat-label">Toplam İndirim</div>
+                        <div class="stat-val">₺0</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
 </div>
 
 <script>
+// Eye toggle
+const EYE_OPEN  = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+const EYE_CLOSE = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+
+function togglePw(id, btn) {
+    const inp = document.getElementById(id);
+    const isText = inp.type === 'text';
+    inp.type = isText ? 'password' : 'text';
+    btn.querySelector('svg').innerHTML = isText ? EYE_OPEN : EYE_CLOSE;
+    btn.style.color = isText ? '' : '#374151';
+}
+
+// Toast
 function showToast(id, msg, type) {
     const el = document.getElementById(id);
     el.textContent = msg;
-    el.className = 'toast ' + type;
+    el.className = 'field-toast ' + type;
     el.style.display = 'block';
-    setTimeout(() => { el.style.display = 'none'; }, 3500);
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
 }
 
+// Copy helper
+function doCopy(inputId, btnId) {
+    const val = document.getElementById(inputId).value;
+    navigator.clipboard.writeText(val).then(() => {
+        const btn = document.getElementById(btnId);
+        const orig = btn.innerHTML;
+        btn.classList.add('copied');
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Kopyalandı';
+        setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 2000);
+    });
+}
+
+// Profile form
 document.getElementById('profileForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const btn = document.getElementById('profileBtn');
+    const first = document.getElementById('firstName').value.trim();
+    const last  = document.getElementById('lastName').value.trim();
+    if (!first) { showToast('profileToast', 'Ad alanı boş bırakılamaz.', 'error'); return; }
     btn.disabled = true;
     try {
         const res = await fetch('/account', {
@@ -207,57 +352,53 @@ document.getElementById('profileForm').addEventListener('submit', async function
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'update_profile',
-                full_name: document.getElementById('fullName').value.trim(),
-                company:   document.getElementById('company').value.trim(),
-                phone:     document.getElementById('phone').value.trim(),
+                full_name: (first + ' ' + last).trim(),
             })
         });
         const data = await res.json();
-        if (res.ok && data.success) {
-            showToast('profileToast', 'Profil güncellendi.', 'success');
+        if (res.ok) {
+            btn.textContent = 'Kaydedildi';
+            btn.classList.add('saved');
+            // Update avatar
+            const initials = (first[0] + (last[0] || '')).toUpperCase();
+            document.getElementById('avatarCircle').textContent = initials;
+            setTimeout(() => { btn.textContent = 'Kaydet'; btn.classList.remove('saved'); }, 2000);
         } else {
             showToast('profileToast', data.error || 'Bir hata oluştu.', 'error');
         }
-    } catch {
-        showToast('profileToast', 'Bağlantı hatası.', 'error');
-    }
+    } catch { showToast('profileToast', 'Bağlantı hatası.', 'error'); }
     btn.disabled = false;
 });
 
+// Password form
 document.getElementById('passwordForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const btn   = document.getElementById('pwBtn');
-    const curPw = document.getElementById('curPw').value;
-    const newPw = document.getElementById('newPw').value;
-    const newPw2= document.getElementById('newPw2').value;
-
-    if (!curPw) { showToast('pwToast', 'Mevcut şifreyi girin.', 'error'); return; }
-    if (newPw.length < 8) { showToast('pwToast', 'Yeni şifre en az 8 karakter olmalıdır.', 'error'); return; }
-    if (newPw !== newPw2) { showToast('pwToast', 'Yeni şifreler eşleşmiyor.', 'error'); return; }
-
+    const btn    = document.getElementById('pwBtn');
+    const curPw  = document.getElementById('curPw').value;
+    const newPw  = document.getElementById('newPw').value;
+    const confPw = document.getElementById('confirmPw').value;
+    if (!curPw)                   { showToast('pwToast', 'Mevcut şifreyi girin.', 'error'); return; }
+    if (newPw.length < 8)         { showToast('pwToast', 'Yeni şifre en az 8 karakter olmalıdır.', 'error'); return; }
+    if (newPw !== confPw)         { showToast('pwToast', 'Şifreler eşleşmiyor.', 'error'); return; }
     btn.disabled = true;
     try {
         const res = await fetch('/account', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'change_password',
-                current_password: curPw,
-                new_password: newPw,
-            })
+            body: JSON.stringify({ action: 'change_password', current_password: curPw, new_password: newPw })
         });
         const data = await res.json();
-        if (res.ok && data.success) {
-            showToast('pwToast', 'Şifre başarıyla güncellendi.', 'success');
+        if (res.ok) {
+            btn.textContent = 'Şifre Güncellendi';
+            btn.classList.add('saved');
             document.getElementById('curPw').value = '';
             document.getElementById('newPw').value = '';
-            document.getElementById('newPw2').value = '';
+            document.getElementById('confirmPw').value = '';
+            setTimeout(() => { btn.textContent = 'Şifreyi Güncelle'; btn.classList.remove('saved'); }, 2000);
         } else {
             showToast('pwToast', data.error || 'Bir hata oluştu.', 'error');
         }
-    } catch {
-        showToast('pwToast', 'Bağlantı hatası.', 'error');
-    }
+    } catch { showToast('pwToast', 'Bağlantı hatası.', 'error'); }
     btn.disabled = false;
 });
 </script>
