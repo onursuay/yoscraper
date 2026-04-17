@@ -1116,7 +1116,6 @@ function buildPreview() {
     document.getElementById('prev-schedule').textContent = schedText;
 
     // Sample data for preview rendering
-    const src = document.getElementById('f-source').value || 'scanner';
     const sectorVal = document.getElementById('f-sector').value || (lang==='en'?'Technology':'Teknoloji');
     const sampleLead = src === 'scanner'
         ? { firma_adi:'Örnek Teknoloji A.Ş.', ad:'', soyad:'', sektor: sectorVal, sehir:'İstanbul', domain:'ornek.com', email:'yetkili@ornek.com', unsubscribe_url:'#' }
