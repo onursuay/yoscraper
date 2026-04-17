@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <title>Faturalarım — Yo Scraper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+{% include 'header.html' %}
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f9fafb; color: #111827; min-height: 100vh; }
+
+.fa-topbar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+.fa-topbar h1 { font-size: 22px; font-weight: 700; color: #111827; }
+.fa-topbar p { font-size: 13px; color: #6b7280; margin-top: 3px; }
+
+.fa-body { padding: 24px; background: #f9fafb; }
+.fa-inner { max-width: 1100px; margin: 0 auto; }
+.fa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 900px) { .fa-grid { grid-template-columns: 1fr; } }
+
+.card { background: #fff; border-radius: 16px; border: 1px solid #e5e7eb; padding: 24px; }
+.card h3 { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+.card p.desc { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
+
+/* Type toggle */
+.type-tabs { display: flex; gap: 4px; background: #f3f4f6; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+.type-tab { flex: 1; padding: 8px; font-size: 13px; font-weight: 500; color: #6b7280; background: transparent; border: none; border-radius: 6px; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.type-tab.active { background: #fff; color: #111827; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.type-tab:hover:not(.active) { color: #374151; }
+
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 13px; font-weight: 500; color: #4b5563; margin-bottom: 6px; }
+.field input, .field textarea {
+    width: 100%; padding: 9px 12px; font-size: 13px; font-family: inherit;
+    border: 1px solid #d1d5db; border-radius: 8px;
+    background: #fff; color: #111827; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field input:focus, .field textarea:focus {
+    border-color: #2BB673; box-shadow: 0 0 0 3px rgba(43,182,115,0.15);
+}
+.field textarea { resize: none; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+@media (max-width: 540px) { .grid-4 { grid-template-columns: 1fr 1fr; } }
+
+.country-pill {
+    display: flex; align-items: center; gap: 6px; padding: 9px 12px;
+    background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; color: #6b7280; flex-shrink: 0;
+}
+
+.phone-row { display: flex; gap: 8px; }
+
+.btn-primary {
+    width: 100%; padding: 10px 16px; font-size: 13px; font-weight: 500;
+    color: #fff; background: #2BB673; border: none; border-radius: 8px;
+    cursor: pointer; transition: background 0.15s; font-family: inherit;
+    margin-top: 8px;
+}
+.btn-primary:hover { background: #229d5e; }
+.btn-primary.saved { background: #229d5e; }
+
+.no-invoices { text-align: center; padding: 48px 0; }
+.no-invoices p { font-size: 13px; color: #9ca3af; }
+
+.inv-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.inv-table th { text-align: left; padding: 8px 8px; font-size: 11px; font-weight: 500; color: #6b7280; border-bottom: 1px solid #f3f4f6; }
+.inv-table th.txt-r { text-align: right; }
+.inv-table td { padding: 12px 8px; color: #374151; border-bottom: 1px solid #f9fafb; }
+.inv-table td.txt-r { text-align: right; }
+.badge-paid { padding: 2px 8px; font-size: 11px; font-weight: 500; border-radius: 9999px; background: #dcfce7; color: #15803d; }
+.badge-pending { padding: 2px 8px; font-size: 11px; font-weight: 500; border-radius: 9999px; background: #fef3c7; color: #b45309; }
+</style>
+
+<div class="fa-topbar">
+    <h1>Faturalarım</h1>
+    <p>Fatura bilgilerinizi yönetin ve geçmiş faturalarınızı görüntüleyin.</p>
+</div>
+
+<div class="fa-body">
+<div class="fa-inner">
+<div class="fa-grid">
+
+    <!-- Left: Invoice Info -->
+    <div class="card">
+        <h3>Fatura Bilgileri</h3>
+        <p class="desc">Faturalarınızda kullanılacak adres ve iletişim bilgilerinizi girin.</p>
+
+        <div class="type-tabs">
+            <button class="type-tab active" id="tabIndividual" onclick="setType('individual')">Bireysel</button>
+            <button class="type-tab" id="tabCorporate" onclick="setType('corporate')">Kurumsal</button>
+        </div>
+
+        <div class="grid-2">
+            <div class="field">
+                <label>Ad</label>
+                <input type="text" id="invFirstName" placeholder="">
+            </div>
+            <div class="field">
+                <label>Soyad</label>
+                <input type="text" id="invLastName" placeholder="">
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Telefon</label>
+            <div class="phone-row">
+                <div class="country-pill">🇹🇷 +90</div>
+                <input type="tel" id="invPhone" placeholder="531 232 34 56">
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Adres</label>
+            <div class="grid-4">
+                <div class="country-pill">🇹🇷 Türkiye</div>
+                <input type="text" id="invCity" placeholder="İl">
+                <input type="text" id="invDistrict" placeholder="İlçe">
+                <input type="text" id="invPostal" placeholder="Posta Kodu">
+            </div>
+            <textarea id="invAddress" rows="3" placeholder="Mahalle, sokak, kapı numarası..."></textarea>
+        </div>
+
+        <div id="corpFields" style="display:none;">
+            <div class="field">
+                <label>Şirket Adı</label>
+                <input type="text" id="invCompany">
+            </div>
+            <div class="grid-2">
+                <div class="field">
+                    <label>Vergi Dairesi</label>
+                    <input type="text" id="invTaxOffice">
+                </div>
+                <div class="field">
+                    <label>Vergi Numarası</label>
+                    <input type="text" id="invTaxNumber">
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-primary" id="invSaveBtn" onclick="saveInvoice()">Kaydet</button>
+    </div>
+
+    <!-- Right: Invoice History -->
+    <div class="card">
+        <h3>Fatura Geçmişi</h3>
+        <p class="desc">Daha önce ödediğiniz tüm faturalar burada listelenir.</p>
+
+        <div class="no-invoices">
+            <p>Henüz fatura kaydınız bulunmuyor.</p>
+        </div>
+    </div>
+
+</div>
+</div>
+</div>
+
+<script>
+function setType(t) {
+    const ind  = document.getElementById('tabIndividual');
+    const corp = document.getElementById('tabCorporate');
+    const cf   = document.getElementById('corpFields');
+    if (t === 'individual') {
+        ind.classList.add('active'); corp.classList.remove('active'); cf.style.display = 'none';
+    } else {
+        corp.classList.add('active'); ind.classList.remove('active'); cf.style.display = 'block';
+    }
+    localStorage.setItem('inv_type', t);
+}
+
+function saveInvoice() {
+    const data = {
+        type:       document.getElementById('tabCorporate').classList.contains('active') ? 'corporate' : 'individual',
+        firstName:  document.getElementById('invFirstName').value,
+        lastName:   document.getElementById('invLastName').value,
+        phone:      document.getElementById('invPhone').value,
+        city:       document.getElementById('invCity').value,
+        district:   document.getElementById('invDistrict').value,
+        postalCode: document.getElementById('invPostal').value,
+        address:    document.getElementById('invAddress').value,
+        companyName: document.getElementById('invCompany').value,
+        taxOffice:  document.getElementById('invTaxOffice').value,
+        taxNumber:  document.getElementById('invTaxNumber').value,
+    };
+    localStorage.setItem('invoice_info', JSON.stringify(data));
+    const btn = document.getElementById('invSaveBtn');
+    btn.textContent = 'Kaydedildi';
+    btn.classList.add('saved');
+    setTimeout(() => { btn.textContent = 'Kaydet'; btn.classList.remove('saved'); }, 2000);
+}
+
+// Load saved
+(function() {
+    const t = localStorage.getItem('inv_type') || 'individual';
+    setType(t);
+    try {
+        const stored = JSON.parse(localStorage.getItem('invoice_info') || '{}');
+        if (stored.firstName)   document.getElementById('invFirstName').value = stored.firstName;
+        if (stored.lastName)    document.getElementById('invLastName').value = stored.lastName;
+        if (stored.phone)       document.getElementById('invPhone').value = stored.phone;
+        if (stored.city)        document.getElementById('invCity').value = stored.city;
+        if (stored.district)    document.getElementById('invDistrict').value = stored.district;
+        if (stored.postalCode)  document.getElementById('invPostal').value = stored.postalCode;
+        if (stored.address)     document.getElementById('invAddress').value = stored.address;
+        if (stored.companyName) document.getElementById('invCompany').value = stored.companyName;
+        if (stored.taxOffice)   document.getElementById('invTaxOffice').value = stored.taxOffice;
+        if (stored.taxNumber)   document.getElementById('invTaxNumber').value = stored.taxNumber;
+    } catch {}
+})();
+</script>
+</body>
+</html>

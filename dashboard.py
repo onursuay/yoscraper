@@ -42,7 +42,8 @@ from auth_utils import (
 # ─── Auth helpers ─────────────────────────────────────────────────────────────
 
 _PROTECTED = ('/app', '/external', '/database', '/domains', '/sendmail',
-               '/marketing', '/clickbot', '/account')
+               '/marketing', '/clickbot', '/account',
+               '/faturalarim', '/abonelik', '/yardim')
 
 
 @app.before_request
@@ -545,6 +546,21 @@ def account():
 
     user['initials'] = get_initials(user.get('full_name', '?'))
     return render_template("account.html", user=user)
+
+
+@app.route("/faturalarim")
+def faturalarim():
+    return render_template("faturalarim.html")
+
+
+@app.route("/abonelik")
+def abonelik():
+    return render_template("abonelik.html")
+
+
+@app.route("/yardim")
+def yardim():
+    return render_template("yardim.html")
 
 
 @app.route("/app")

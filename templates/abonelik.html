@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <title>Abonelik — Yo Scraper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+{% include 'header.html' %}
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f9fafb; color: #111827; min-height: 100vh; }
+
+.ab-topbar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+.ab-topbar h1 { font-size: 22px; font-weight: 700; color: #111827; }
+.ab-topbar p { font-size: 13px; color: #6b7280; margin-top: 3px; }
+
+/* Plans dark section */
+.plans-section { background: #111827; padding: 40px 32px; }
+.plans-inner { max-width: 1400px; margin: 0 auto; }
+
+.plans-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px; flex-wrap: wrap; gap: 16px;
+}
+.plans-head h3 { font-size: 18px; font-weight: 700; color: #fff; }
+
+.cycle-toggle { display: flex; gap: 4px; background: #1f2937; border-radius: 8px; padding: 4px; }
+.cycle-btn {
+    padding: 8px 20px; font-size: 13px; font-weight: 500;
+    color: #9ca3af; background: transparent; border: none; border-radius: 6px;
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.cycle-btn.active { background: #fff; color: #111827; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.cycle-btn:hover:not(.active) { color: #fff; }
+.discount-tag { margin-left: 6px; font-size: 11px; font-weight: 700; color: #2BB673; }
+
+.plans-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; }
+@media (max-width: 1024px) { .plans-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px)  { .plans-grid { grid-template-columns: 1fr; } }
+
+.plan-card {
+    background: #1f2937; border: 1px solid #374151;
+    border-radius: 16px; padding: 24px; position: relative;
+    transition: border-color 0.2s;
+}
+.plan-card.highlighted { border-color: #2BB673; box-shadow: 0 8px 32px rgba(43,182,115,0.2); }
+.plan-card .plan-badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: #2BB673; color: #fff;
+    padding: 4px 12px; border-radius: 9999px;
+    font-size: 11px; font-weight: 700;
+}
+.plan-card .plan-name { font-size: 14px; font-weight: 600; color: #d1d5db; margin-bottom: 8px; }
+.plan-card .plan-price { font-size: 32px; font-weight: 800; color: #fff; }
+.plan-card .plan-price-sub { font-size: 13px; color: #9ca3af; margin-bottom: 20px; }
+.plan-card .plan-features { list-style: none; margin-bottom: 24px; }
+.plan-card .plan-features li {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 6px 0; font-size: 13px; color: #d1d5db;
+}
+.plan-card .plan-features li svg { color: #2BB673; flex-shrink: 0; margin-top: 2px; }
+.plan-card .plan-btn {
+    width: 100%; padding: 10px 16px;
+    font-size: 13px; font-weight: 500; font-family: inherit;
+    background: #2BB673; color: #fff;
+    border: none; border-radius: 8px; cursor: pointer;
+    transition: background 0.15s;
+}
+.plan-card .plan-btn:hover { background: #229d5e; }
+.plan-card.current .plan-btn { background: #374151; color: #d1d5db; cursor: default; }
+.plan-card.current .plan-btn:hover { background: #374151; }
+
+.plans-notes { margin-top: 20px; }
+.plans-notes p { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+.plans-notes p.amber { color: #fbbf24; font-weight: 500; }
+
+/* Current Plan + Credit section */
+.current-section { background: #f9fafb; padding: 32px; }
+.current-grid { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 900px) { .current-grid { grid-template-columns: 1fr; } }
+
+.cp-card { background: #fff; border-radius: 16px; border: 1px solid #e5e7eb; padding: 28px; }
+.cp-card h3 { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 24px; }
+
+.cp-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0; border-bottom: 1px solid #f3f4f6;
+}
+.cp-row:last-of-type { border-bottom: none; }
+.cp-row-l { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #6b7280; }
+.cp-row-l svg { color: #9ca3af; }
+.cp-row-r { font-size: 13px; font-weight: 500; color: #111827; }
+.cp-row-r.primary { color: #2BB673; }
+
+.cp-actions { display: flex; gap: 12px; margin-top: 8px; }
+.cp-btn-primary {
+    flex: 1; padding: 12px 16px; background: #2BB673;
+    color: #fff; font-size: 13px; font-weight: 500;
+    border: none; border-radius: 12px; cursor: pointer;
+    transition: background 0.15s; font-family: inherit;
+}
+.cp-btn-primary:hover { background: #229d5e; }
+.cp-btn-ghost {
+    padding: 12px 20px; background: #fff;
+    color: #6b7280; font-size: 13px; font-weight: 500;
+    border: 1px solid #e5e7eb; border-radius: 12px; cursor: pointer;
+    transition: background 0.15s; font-family: inherit;
+}
+.cp-btn-ghost:hover { background: #f9fafb; }
+
+/* Credit load card */
+.credit-card .credit-balance {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px; background: linear-gradient(to right, rgba(43,182,115,0.08), rgba(43,182,115,0.04));
+    border: 1px solid rgba(43,182,115,0.2); border-radius: 12px;
+    margin-bottom: 20px;
+}
+.credit-balance .cb-label { font-size: 13px; color: #6b7280; }
+.credit-balance .cb-value { font-size: 28px; font-weight: 800; color: #2BB673; }
+
+.credit-amounts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.credit-amount-btn {
+    padding: 12px; font-size: 13px; font-weight: 500;
+    color: #4b5563; background: #fff;
+    border: 1px solid #e5e7eb; border-radius: 8px;
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.credit-amount-btn:hover { border-color: #2BB673; color: #2BB673; }
+.credit-amount-btn.selected { background: rgba(43,182,115,0.1); border-color: #2BB673; color: #2BB673; }
+</style>
+
+<div class="ab-topbar">
+    <h1>Abonelik</h1>
+    <p>Aktif planınızı yönetin, plan değiştirin veya kredi yükleyin.</p>
+</div>
+
+<!-- ── Dark Plans Section ── -->
+<div class="plans-section">
+<div class="plans-inner">
+
+    <div class="plans-head">
+        <h3>Planlar</h3>
+        <div class="cycle-toggle">
+            <button class="cycle-btn active" id="cycleMonthly" onclick="setCycle('monthly')">Aylık</button>
+            <button class="cycle-btn" id="cycleYearly" onclick="setCycle('yearly')">Yıllık<span class="discount-tag">-30%</span></button>
+        </div>
+    </div>
+
+    <div class="plans-grid">
+
+        <!-- Free -->
+        <div class="plan-card current">
+            <div class="plan-name">Free</div>
+            <div class="plan-price">₺0</div>
+            <div class="plan-price-sub">/ay</div>
+            <ul class="plan-features">
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 100 lead / ay</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Temel scanner</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> CSV dışa aktarım</li>
+            </ul>
+            <button class="plan-btn">Mevcut Plan</button>
+        </div>
+
+        <!-- Starter -->
+        <div class="plan-card">
+            <div class="plan-name">Starter</div>
+            <div class="plan-price"><span class="price-monthly">₺499</span><span class="price-yearly" style="display:none;">₺349</span></div>
+            <div class="plan-price-sub">/ay</div>
+            <ul class="plan-features">
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 1.000 lead / ay</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> E-posta gönderimi</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Google Sheets</li>
+            </ul>
+            <button class="plan-btn">Yükselt</button>
+        </div>
+
+        <!-- Premium -->
+        <div class="plan-card highlighted">
+            <div class="plan-badge">Önerilen</div>
+            <div class="plan-name">Premium</div>
+            <div class="plan-price"><span class="price-monthly">₺1.499</span><span class="price-yearly" style="display:none;">₺1.049</span></div>
+            <div class="plan-price-sub">/ay</div>
+            <ul class="plan-features">
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 10.000 lead / ay</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Otomasyon kampanyaları</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Click Bot dahil</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Öncelikli destek</li>
+            </ul>
+            <button class="plan-btn">Yükselt</button>
+        </div>
+
+        <!-- Enterprise -->
+        <div class="plan-card">
+            <div class="plan-name">Enterprise</div>
+            <div class="plan-price">Özel</div>
+            <div class="plan-price-sub">Görüşelim</div>
+            <ul class="plan-features">
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Sınırsız lead</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> SSO / SAML</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Özel hesap yöneticisi</li>
+                <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Özel entegrasyonlar</li>
+            </ul>
+            <button class="plan-btn">İletişime Geç</button>
+        </div>
+
+    </div>
+
+    <div class="plans-notes">
+        <p>* 14 günlük ücretsiz deneme — Premium plan için geçerlidir.</p>
+        <p class="amber">* Optimizasyon paketleri ek olarak satın alınabilir.</p>
+    </div>
+
+</div>
+</div>
+
+<!-- ── Current Plan + Credits ── -->
+<div class="current-section">
+<div class="current-grid">
+
+    <!-- Current Plan Card -->
+    <div class="cp-card">
+        <h3>Mevcut Plan</h3>
+
+        <div class="cp-row">
+            <div class="cp-row-l">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Plan</span>
+            </div>
+            <span class="cp-row-r">Free</span>
+        </div>
+
+        <div class="cp-row">
+            <div class="cp-row-l">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Durum</span>
+            </div>
+            <span class="cp-row-r primary">Aktif</span>
+        </div>
+
+        <div class="cp-row">
+            <div class="cp-row-l">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                <span>Faturalandırma</span>
+            </div>
+            <span class="cp-row-r">Aylık</span>
+        </div>
+
+        <div class="cp-actions">
+            <button class="cp-btn-primary" onclick="window.scrollTo({top:0,behavior:'smooth'})">Plan Yükselt</button>
+        </div>
+    </div>
+
+    <!-- Credit Load Card -->
+    <div class="cp-card credit-card" id="krediler">
+        <h3>Kredi Yükle</h3>
+
+        <div class="credit-balance">
+            <div>
+                <div class="cb-label">Mevcut Bakiye</div>
+                <div class="cb-value">₺0,00</div>
+            </div>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2BB673" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+
+        <div style="font-size:13px;color:#4b5563;margin-bottom:10px;font-weight:500;">Yüklenecek Tutar</div>
+        <div class="credit-amounts">
+            <button class="credit-amount-btn" onclick="selectAmt(this,100)">₺100</button>
+            <button class="credit-amount-btn selected" onclick="selectAmt(this,250)">₺250</button>
+            <button class="credit-amount-btn" onclick="selectAmt(this,500)">₺500</button>
+        </div>
+        <button class="cp-btn-primary" style="border-radius:8px;">Kredi Yükle</button>
+    </div>
+
+</div>
+</div>
+
+<script>
+function setCycle(c) {
+    const m = document.getElementById('cycleMonthly');
+    const y = document.getElementById('cycleYearly');
+    if (c === 'monthly') { m.classList.add('active'); y.classList.remove('active'); }
+    else { y.classList.add('active'); m.classList.remove('active'); }
+    document.querySelectorAll('.price-monthly').forEach(el => el.style.display = c === 'monthly' ? '' : 'none');
+    document.querySelectorAll('.price-yearly').forEach(el  => el.style.display = c === 'yearly'  ? '' : 'none');
+}
+
+function selectAmt(btn, val) {
+    document.querySelectorAll('.credit-amount-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
+if (location.hash === '#krediler') {
+    setTimeout(() => document.getElementById('krediler')?.scrollIntoView({ behavior: 'smooth' }), 100);
+}
+</script>
+</body>
+</html>
