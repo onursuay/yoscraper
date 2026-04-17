@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <title>Yo Scraper — Kampanya Detayı</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+        .container { max-width:1100px; margin:0 auto; padding:24px 32px 80px; }
+
+        .page-header { display:flex; align-items:center; gap:14px; margin-bottom:24px; flex-wrap:wrap; }
+        .page-header a { color:#64748b; text-decoration:none; font-size:13px; }
+        .page-header a:hover { color:#e2e8f0; }
+        .page-title { font-size:20px; font-weight:800; color:#f1f5f9; flex:1; }
+        .btn { padding:8px 16px; border:none; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
+        .btn-primary { background:#3b82f6; color:#fff; }
+        .btn-primary:hover { background:#2563eb; }
+        .btn-danger { background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+        .btn-danger:hover { background:rgba(239,68,68,.25); }
+        .btn-ghost { background:transparent; border:1px solid #334155; color:#94a3b8; }
+        .btn-ghost:hover { border-color:#3b82f6; color:#e2e8f0; }
+
+        /* Stats */
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+        .stat-card { background:#1e293b; border:1px solid #334155; border-radius:10px; padding:14px 16px; }
+        .stat-label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+        .stat-value { font-size:24px; font-weight:700; }
+        .stat-sub { font-size:11px; color:#64748b; margin-top:2px; }
+        .c-blue   { color:#3b82f6; }
+        .c-green  { color:#22c55e; }
+        .c-red    { color:#ef4444; }
+        .c-yellow { color:#f59e0b; }
+        .c-purple { color:#a78bfa; }
+        .c-teal   { color:#2dd4bf; }
+        .c-gray   { color:#94a3b8; }
+
+        /* Card */
+        .card { background:#1e293b; border:1px solid #334155; border-radius:12px; overflow:hidden; margin-bottom:16px; }
+        .card-header { padding:13px 18px; border-bottom:1px solid #334155; display:flex; align-items:center; justify-content:space-between; }
+        .card-title { font-size:12px; font-weight:700; color:#f1f5f9; text-transform:uppercase; letter-spacing:.5px; }
+
+        /* Info grid */
+        .info-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; padding:16px 18px; }
+        .info-item { }
+        .info-label { font-size:11px; color:#64748b; margin-bottom:3px; }
+        .info-value { font-size:13px; color:#e2e8f0; font-weight:500; word-break:break-all; }
+
+        /* Badge */
+        .badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-draft     { background:rgba(100,116,139,.2); color:#94a3b8; }
+        .badge-running   { background:rgba(34,197,94,.15); color:#22c55e; }
+        .badge-scheduled { background:rgba(59,130,246,.15); color:#60a5fa; }
+        .badge-completed { background:rgba(148,163,184,.15); color:#94a3b8; }
+        .badge-cancelled { background:rgba(239,68,68,.15); color:#ef4444; }
+        .type-badge { padding:2px 8px; border-radius:6px; font-size:11px; }
+        .type-broadcast { background:rgba(139,92,246,.15); color:#a78bfa; }
+        .type-sequence  { background:rgba(20,184,166,.15); color:#2dd4bf; }
+
+        /* Table */
+        .table { width:100%; border-collapse:collapse; }
+        .table th { padding:9px 14px; text-align:left; font-size:11px; text-transform:uppercase; color:#64748b; background:#172133; border-bottom:1px solid #334155; }
+        .table td { padding:9px 14px; font-size:12px; color:#cbd5e1; border-bottom:1px solid rgba(51,65,85,.3); vertical-align:middle; }
+        .table tr:hover td { background:rgba(59,130,246,.04); }
+        .enroll-active    { background:rgba(34,197,94,.1); color:#22c55e; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+        .enroll-completed { background:rgba(148,163,184,.1); color:#94a3b8; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+        .enroll-failed    { background:rgba(239,68,68,.1); color:#ef4444; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+        .enroll-unsub     { background:rgba(245,158,11,.1); color:#f59e0b; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+
+        .event-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+        .ev-sent      { background:#3b82f6; }
+        .ev-delivered { background:#22c55e; }
+        .ev-opened    { background:#a78bfa; }
+        .ev-clicked   { background:#2dd4bf; }
+        .ev-bounced   { background:#ef4444; }
+        .ev-complained{ background:#f59e0b; }
+        .ev-failed    { background:#ef4444; }
+
+        .layout-2col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        @media(max-width:780px) { .layout-2col { grid-template-columns:1fr; } }
+        .empty-msg { text-align:center; padding:32px; color:#475569; font-size:13px; }
+
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+    </style>
+</head>
+<body>
+
+{% include 'header.html' %}
+
+<div class="container">
+
+    <div class="page-header">
+        <a href="/marketing" data-i18n="mkt-back">← Pazarlama</a>
+        <h1 class="page-title" id="campaignName" data-i18n="mkt-loading">Yükleniyor...</h1>
+        <div id="actionBtns" style="display:flex;gap:8px;"></div>
+    </div>
+
+    <!-- Campaign info -->
+    <div class="card" id="campaignInfo" style="display:none;">
+        <div class="card-header">
+            <span class="card-title" data-i18n="mkt-cmp-info">Kampanya Bilgileri</span>
+            <span id="statusBadge"></span>
+        </div>
+        <div class="info-grid" id="infoGrid"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+        <!-- filled by JS -->
+    </div>
+
+    <!-- Progress bar for pending -->
+    <div id="progressWrap" style="display:none;margin-bottom:16px;">
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;">
+            <div style="font-size:12px;color:#64748b;margin-bottom:6px;" data-i18n="mkt-sending-progress">Gönderim devam ediyor...</div>
+            <div style="height:6px;background:#334155;border-radius:3px;overflow:hidden;">
+                <div id="progressFill" style="height:100%;background:#3b82f6;border-radius:3px;transition:width .5s;width:0%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="layout-2col">
+        <!-- Events timeline -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title" data-i18n="mkt-events">Son Olaylar</span>
+                <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="loadEvents()" data-i18n="mkt-refresh">Yenile</button>
+            </div>
+            <div style="overflow-x:auto;max-height:400px;overflow-y:auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="mkt-ev-type">Olay</th>
+                            <th data-i18n="mkt-ev-email">E-posta</th>
+                            <th data-i18n="mkt-ev-time">Zaman</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsBody">
+                        <tr><td colspan="3" class="empty-msg" data-i18n="mkt-loading">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Enrollments (sequence) / Queue status (broadcast) -->
+        <div class="card" id="rightCard">
+            <div class="card-header">
+                <span class="card-title" id="rightCardTitle" data-i18n="mkt-queue">Kuyruk Durumu</span>
+                <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="loadRight()" data-i18n="mkt-refresh">Yenile</button>
+            </div>
+            <div style="overflow-x:auto;max-height:400px;overflow-y:auto;">
+                <table class="table" id="rightTable">
+                    <thead id="rightTableHead"></thead>
+                    <tbody id="rightBody">
+                        <tr><td colspan="4" class="empty-msg" data-i18n="mkt-loading">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const CAMPAIGN_ID = '{{ campaign_id }}';
+let campaignData = null;
+let statsTimer = null;
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+function statusBadge(s) {
+    const map = { draft:'badge-draft', running:'badge-running', scheduled:'badge-scheduled', completed:'badge-completed', cancelled:'badge-cancelled', paused:'badge-paused' };
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const labelTr = {draft:'Taslak',running:'Çalışıyor',scheduled:'Zamanlandı',completed:'Tamamlandı',cancelled:'İptal',paused:'Durduruldu'};
+    const labelEn = {draft:'Draft',running:'Running',scheduled:'Scheduled',completed:'Completed',cancelled:'Cancelled',paused:'Paused'};
+    const label = (lang==='en'?labelEn:labelTr)[s] || s;
+    return `<span class="badge ${map[s]||'badge-draft'}">${label}</span>`;
+}
+
+function typeBadge(tp) {
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    if (tp === 'sequence') return `<span class="type-badge type-sequence">${lang==='en'?'Sequence':'Sekans'}</span>`;
+    return `<span class="type-badge type-broadcast">Broadcast</span>`;
+}
+
+function evClass(t) {
+    const m = {sent:'ev-sent','email.delivered':'ev-delivered','email.opened':'ev-opened','email.clicked':'ev-clicked','email.bounced':'ev-bounced','email.complained':'ev-complained',failed:'ev-failed'};
+    return m[t] || 'ev-sent';
+}
+function evLabel(t, lang) {
+    const tr = {sent:'Gönderildi','email.delivered':'Teslim','email.opened':'Açıldı','email.clicked':'Tıklandı','email.bounced':'Geri Döndü','email.complained':'Spam Şikayeti',failed:'Başarısız'};
+    const en = {sent:'Sent','email.delivered':'Delivered','email.opened':'Opened','email.clicked':'Clicked','email.bounced':'Bounced','email.complained':'Complained',failed:'Failed'};
+    return (lang==='en'?en:tr)[t] || t;
+}
+
+async function loadCampaign() {
+    const r = await fetch(`/api/marketing/campaigns/${CAMPAIGN_ID}`);
+    if (!r.ok) { document.getElementById('campaignName').textContent = 'Not found'; return; }
+    campaignData = await r.json();
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+
+    document.getElementById('campaignName').textContent = campaignData.name;
+    document.getElementById('statusBadge').innerHTML = statusBadge(campaignData.status);
+    document.getElementById('campaignInfo').style.display = 'block';
+
+    const sf = campaignData.segment_filter || {};
+    document.getElementById('infoGrid').innerHTML = `
+        <div class="info-item"><div class="info-label">${lang==='en'?'Type':'Tür'}</div><div class="info-value">${typeBadge(campaignData.type)}</div></div>
+        <div class="info-item"><div class="info-label">${lang==='en'?'Subject':'Konu'}</div><div class="info-value">${campaignData.subject||'—'}</div></div>
+        <div class="info-item"><div class="info-label">${lang==='en'?'Sector Filter':'Sektör Filtresi'}</div><div class="info-value">${sf.sector||lang==='en'?'All':'Tümü'}</div></div>
+        <div class="info-item"><div class="info-label">${lang==='en'?'Schedule':'Zamanlama'}</div><div class="info-value">${campaignData.scheduled_at?fmtDate(campaignData.scheduled_at):lang==='en'?'Immediate':'Hemen'}</div></div>
+        <div class="info-item"><div class="info-label">${lang==='en'?'Created':'Oluşturuldu'}</div><div class="info-value">${fmtDate(campaignData.created_at)}</div></div>
+    `;
+
+    // Action buttons
+    const btns = document.getElementById('actionBtns');
+    btns.innerHTML = '';
+    if (campaignData.status === 'draft') {
+        const b = document.createElement('button');
+        b.className = 'btn btn-primary';
+        b.textContent = lang==='en'?'🚀 Launch':'🚀 Başlat';
+        b.onclick = launchCampaign;
+        btns.appendChild(b);
+    }
+    if (campaignData.status === 'running') {
+        const b = document.createElement('button');
+        b.className = 'btn btn-danger';
+        b.textContent = lang==='en'?'Cancel':'İptal';
+        b.onclick = cancelCampaign;
+        btns.appendChild(b);
+    }
+
+    // Right card setup
+    const isSeq = campaignData.type === 'sequence';
+    const rc = document.getElementById('rightCardTitle');
+    rc.setAttribute('data-i18n', isSeq ? 'mkt-enrollments' : 'mkt-queue');
+    rc.textContent = isSeq ? (lang==='en'?'Enrollments':'Kayıtlar') : (lang==='en'?'Queue Status':'Kuyruk Durumu');
+
+    const head = document.getElementById('rightTableHead');
+    if (isSeq) {
+        head.innerHTML = `<tr><th>${lang==='en'?'Email':'E-posta'}</th><th>${lang==='en'?'Step':'Adım'}</th><th>${lang==='en'?'Status':'Durum'}</th><th>${lang==='en'?'Next Send':'Sonraki'}</th></tr>`;
+    } else {
+        head.innerHTML = `<tr><th>${lang==='en'?'Email':'E-posta'}</th><th>${lang==='en'?'Subject':'Konu'}</th><th>${lang==='en'?'Status':'Durum'}</th><th>${lang==='en'?'Sent At':'Zaman'}</th></tr>`;
+    }
+
+    loadStats();
+    loadEvents();
+    loadRight();
+
+    // Auto-refresh if running
+    if (campaignData.status === 'running') {
+        statsTimer = setInterval(() => { loadStats(); loadEvents(); loadRight(); }, 10000);
+    }
+}
+
+async function loadStats() {
+    const r = await fetch(`/api/marketing/campaigns/${CAMPAIGN_ID}/stats`);
+    const s = await r.json();
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const L = (tr, en) => lang === 'en' ? en : tr;
+
+    document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card"><div class="stat-label">${L('Toplam','Total')}</div><div class="stat-value c-blue">${s.total??0}</div></div>
+        <div class="stat-card"><div class="stat-label">${L('Gönderildi','Sent')}</div><div class="stat-value c-green">${s.sent??0}</div></div>
+        <div class="stat-card"><div class="stat-label">${L('Bekliyor','Pending')}</div><div class="stat-value c-yellow">${s.pending??0}</div></div>
+        <div class="stat-card"><div class="stat-label">${L('Teslim','Delivered')}</div><div class="stat-value c-teal">${s.delivered??0}</div></div>
+        <div class="stat-card"><div class="stat-label">${L('Açıldı','Opened')}</div><div class="stat-value c-purple">${s.opened??0}</div><div class="stat-sub">${s.open_rate??0}%</div></div>
+        <div class="stat-card"><div class="stat-label">${L('Tıklandı','Clicked')}</div><div class="stat-value c-teal">${s.clicked??0}</div><div class="stat-sub">${s.click_rate??0}%</div></div>
+        <div class="stat-card"><div class="stat-label">${L('Başarısız','Failed')}</div><div class="stat-value c-red">${s.failed??0}</div></div>
+        <div class="stat-card"><div class="stat-label">${L('Geri Döndü','Bounced')}</div><div class="stat-value c-red">${s.bounced??0}</div></div>
+    `;
+
+    // Progress bar
+    const total = (s.total||0);
+    const done  = (s.sent||0) + (s.failed||0);
+    if (total > 0 && (s.pending||0) > 0) {
+        document.getElementById('progressWrap').style.display = 'block';
+        document.getElementById('progressFill').style.width = Math.round(done/total*100) + '%';
+    } else {
+        document.getElementById('progressWrap').style.display = 'none';
+    }
+}
+
+async function loadEvents() {
+    const r = await fetch(`/api/marketing/campaigns/${CAMPAIGN_ID}/events?limit=50`);
+    const data = await r.json();
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const tbody = document.getElementById('eventsBody');
+    if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="3" class="empty-msg">${lang==='en'?'No events yet.':'Henüz olay yok.'}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = data.map(e => `
+        <tr>
+            <td><span class="event-dot ${evClass(e.event_type)}"></span>${evLabel(e.event_type, lang)}</td>
+            <td style="color:#94a3b8;font-size:11px;">${e.to_email}</td>
+            <td style="color:#64748b;font-size:11px;">${fmtDate(e.occurred_at)}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadRight() {
+    if (!campaignData) return;
+    const isSeq = campaignData.type === 'sequence';
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const tbody = document.getElementById('rightBody');
+
+    if (isSeq) {
+        const r = await fetch(`/api/marketing/campaigns/${CAMPAIGN_ID}/enrollments`);
+        const data = await r.json();
+        if (!data.length) {
+            tbody.innerHTML = `<tr><td colspan="4" class="empty-msg">${lang==='en'?'No enrollments yet.':'Kayıt yok.'}</td></tr>`;
+            return;
+        }
+        const statusCls = {active:'enroll-active',completed:'enroll-completed',failed:'enroll-failed',unsubscribed:'enroll-unsub'};
+        const statusLbTr = {active:'Aktif',completed:'Tamamlandı',failed:'Başarısız',unsubscribed:'Çıktı',paused:'Duraklatıldı'};
+        const statusLbEn = {active:'Active',completed:'Done',failed:'Failed',unsubscribed:'Unsub',paused:'Paused'};
+        tbody.innerHTML = data.map(e => `
+            <tr>
+                <td style="font-size:11px;">${e.lead_email}</td>
+                <td style="color:#64748b;font-size:11px;">${e.current_step}</td>
+                <td><span class="${statusCls[e.status]||'enroll-active'}">${(lang==='en'?statusLbEn:statusLbTr)[e.status]||e.status}</span></td>
+                <td style="color:#64748b;font-size:11px;">${fmtDate(e.next_send_at)}</td>
+            </tr>
+        `).join('');
+    } else {
+        // Broadcast: show queue
+        const r = await fetch(`/api/marketing/campaigns/${CAMPAIGN_ID}/events?limit=50`);
+        const data = await r.json();
+        if (!data.length) {
+            tbody.innerHTML = `<tr><td colspan="4" class="empty-msg">${lang==='en'?'No queue items.':'Kuyruk boş.'}</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = data.map(e => `
+            <tr>
+                <td style="font-size:11px;">${e.to_email}</td>
+                <td style="font-size:11px;color:#94a3b8;">${evLabel(e.event_type, lang)}</td>
+                <td><span class="event-dot ${evClass(e.event_type)}"></span></td>
+                <td style="color:#64748b;font-size:11px;">${fmtDate(e.occurred_at)}</td>
+            </tr>
+        `).join('');
+    }
+}
+
+async function launchCampaign() {
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    if (!confirm(lang==='en'?'Launch this campaign?':'Kampanya başlatılsın mı?')) return;
+    const r = await fetch(`/api/marketing/campaigns/${CAMPAIGN_ID}/launch`, {method:'POST'});
+    const d = await r.json();
+    if (d.error) { alert(d.error); return; }
+    location.reload();
+}
+
+async function cancelCampaign() {
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    if (!confirm(lang==='en'?'Cancel this campaign?':'Kampanya iptal edilsin mi?')) return;
+    await fetch(`/api/marketing/campaigns/${CAMPAIGN_ID}/cancel`, {method:'POST'});
+    clearInterval(statsTimer);
+    location.reload();
+}
+
+loadCampaign();
+</script>
+
+</body>
+</html>

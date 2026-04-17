@@ -38,6 +38,13 @@ app.register_blueprint(clickbot_bp)
 init_clickbot(socketio)
 register_socketio_handlers(socketio)
 
+from marketing.scheduler import start_scheduler
+from marketing.db import is_suppressed, add_suppression, remove_suppression
+from marketing.unsub import generate_token, verify_token
+from marketing.queue import build_footer
+from marketing.routes import marketing_bp
+app.register_blueprint(marketing_bp)
+
 # Tarama durumu (global)
 scan_state = {
     "running": False,
@@ -203,6 +210,28 @@ def add_log(message: str):
         scan_state["logs"] = scan_state["logs"][-50:]
 
 
+def _auto_enroll_new_leads(businesses: list[dict]):
+    """trigger_type='lead_created' olan aktif sequence kampanyalarına yeni leadleri enroll et."""
+    try:
+        from marketing.db import sb_select
+        from marketing.campaigns import enroll_lead
+        campaigns = sb_select("campaigns", {
+            "type":         "eq.sequence",
+            "trigger_type": "eq.lead_created",
+            "status":       "eq.running",
+            "select":       "id",
+        })
+        for c in campaigns:
+            for biz in businesses:
+                if biz.get("email"):
+                    enroll_lead(c["id"], biz["email"], biz.get("name", ""), {
+                        "sector": biz.get("sector", ""),
+                        "domain": biz.get("domain", ""),
+                    })
+    except Exception as e:
+        logger.debug(f"auto_enroll error: {e}")
+
+
 def run_scan(sector: str, city: str, min_results: int):
     """Arka planda tarama calistir."""
     scan_state["running"] = True
@@ -339,6 +368,9 @@ def run_scan(sector: str, city: str, min_results: int):
             added = sheets.append_businesses(valid_businesses)
             add_log(f"{added} yeni işletme Google Sheets'e eklendi.")
             scan_state["status"] = f"Tamamlandı! {len(valid_businesses)} işletme bulundu, {added} yeni kayıt eklendi."
+
+            # Auto-enroll: lead_created trigger olan sequence kampanyalarına enroll et
+            _auto_enroll_new_leads(valid_businesses)
         elif len(scan_state["results"]) > 0:
             # Sonuclar bulundu ama hepsi zaten kayitli
             scan_state["status"] = f"Tamamlandı! {len(scan_state['results'])} işletme bulundu (hepsi zaten kayıtlı)."
@@ -670,43 +702,46 @@ def sendmail_page():
 
 
 # --- Unsubscribe ---
-UNSUBSCRIBED_FILE = os.path.join(os.path.dirname(__file__), "unsubscribed.json")
-
-
-def _load_unsubscribed():
-    if os.path.exists(UNSUBSCRIBED_FILE):
-        with open(UNSUBSCRIBED_FILE, "r") as f:
-            return set(json.load(f))
-    return set()
-
-
-def _save_unsubscribed(emails: set):
-    with open(UNSUBSCRIBED_FILE, "w") as f:
-        json.dump(sorted(emails), f, indent=2)
-
-
 @app.route("/unsubscribe")
 def unsubscribe_page():
-    email = request.args.get("email", "")
-    if email:
-        unsubs = _load_unsubscribed()
-        unsubs.add(email.lower().strip())
-        _save_unsubscribed(unsubs)
-    return render_template("unsubscribe.html", email=email)
+    token = request.args.get("token", "")
+    email_raw = request.args.get("email", "")  # eski link backward compat
+
+    email = ""
+    error = False
+
+    if token:
+        email = verify_token(token) or ""
+        if not email:
+            error = True
+    elif email_raw:
+        email = email_raw.lower().strip()
+
+    if email and not error:
+        add_suppression(email, reason="unsubscribed", source="user")
+
+    return render_template("unsubscribe.html", email=email, error=error)
 
 
 @app.route("/api/unsubscribed", methods=["GET"])
 def get_unsubscribed():
-    return jsonify({"emails": sorted(_load_unsubscribed())})
+    from marketing.db import sb_select
+    try:
+        rows = sb_select("email_suppressions", {
+            "reason": "eq.unsubscribed",
+            "select": "email,created_at",
+            "order": "created_at.desc",
+        })
+        return jsonify({"emails": [r["email"] for r in rows]})
+    except Exception as e:
+        return jsonify({"emails": [], "error": str(e)})
 
 
 @app.route("/api/unsubscribed", methods=["DELETE"])
 def remove_unsubscribed():
-    email = request.json.get("email", "")
+    email = (request.json or {}).get("email", "")
     if email:
-        unsubs = _load_unsubscribed()
-        unsubs.discard(email.lower().strip())
-        _save_unsubscribed(unsubs)
+        remove_suppression(email)
     return jsonify({"ok": True})
 
 
@@ -742,6 +777,8 @@ def api_sendmail_send():
     from_name = os.getenv("FROM_NAME", "YO Dijital")
     from_email = os.getenv("FROM_EMAIL", "info@yodijital.com")
 
+    base_url = os.getenv("APP_BASE_URL", "https://scraper.yodijital.com")
+
     def send_thread():
         global _mail_sending
         _mail_sending = True
@@ -754,9 +791,28 @@ def api_sendmail_send():
             if not email:
                 continue
 
+            # Suppression kontrolü (Supabase email_suppressions)
+            if is_suppressed(email):
+                entry = {
+                    "id": len(_mail_history) + 1,
+                    "to": email,
+                    "name": name,
+                    "subject": subject,
+                    "status": "failed",
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "error": "suppressed",
+                }
+                _mail_history.append(entry)
+                socketio.emit("mail_update", entry)
+                continue
+
             sector = r.get("sector", "")
             city = r.get("city", "")
             body = html_body.replace("{firma_adi}", name).replace("{from_name}", from_name).replace("{email}", email).replace("{sektor}", sector).replace("{sehir}", city)
+
+            # Footer + List-Unsubscribe
+            footer_html, unsub_url = build_footer(base_url, email)
+            body = body + footer_html
 
             entry = {
                 "id": len(_mail_history) + 1,
@@ -780,6 +836,10 @@ def api_sendmail_send():
                         "to": [email],
                         "subject": subject,
                         "html": body,
+                        "headers": {
+                            "List-Unsubscribe": f"<{unsub_url}>",
+                            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                        },
                     },
                     timeout=15,
                 )
@@ -1610,6 +1670,79 @@ if _lead_url:
 if _lead_sheet:
     app.config["LEAD_SHEET_NAME"] = _lead_sheet
 
+
+# --- Resend Webhook ---
+@app.route("/api/webhooks/resend", methods=["POST"])
+def resend_webhook():
+    """Resend delivery events → email_events tablosu + otomatik suppression."""
+    # Svix imza doğrulaması (Resend, Svix kullanır)
+    secret = os.getenv("RESEND_WEBHOOK_SECRET", "")
+    if secret:
+        import hmac, hashlib, base64
+        svix_id        = request.headers.get("svix-id", "")
+        svix_timestamp = request.headers.get("svix-timestamp", "")
+        svix_signature = request.headers.get("svix-signature", "")
+        if not (svix_id and svix_timestamp and svix_signature):
+            return jsonify({"error": "missing svix headers"}), 401
+        signed_content = f"{svix_id}.{svix_timestamp}.{request.get_data(as_text=True)}"
+        key = base64.b64decode(secret.removeprefix("whsec_"))
+        expected = "v1," + base64.b64encode(
+            hmac.new(key, signed_content.encode(), hashlib.sha256).digest()
+        ).decode()
+        if not any(sig == expected for sig in svix_signature.split(" ")):
+            return jsonify({"error": "invalid signature"}), 401
+
+    payload = request.json or {}
+    event_type = payload.get("type", "")
+    data = payload.get("data", {})
+    to_email = ""
+
+    # Resend webhook payload yapısı: data.to = [email] veya data.email
+    if isinstance(data.get("to"), list) and data["to"]:
+        to_email = data["to"][0].lower().strip()
+    elif data.get("email_id"):
+        to_email = data.get("to", "")
+
+    if not to_email:
+        return jsonify({"ok": True})
+
+    provider_message_id = data.get("email_id", "")
+
+    from marketing.db import sb_select, sb_insert
+    queue_id = None
+    campaign_id = None
+    try:
+        rows = sb_select("email_queue", {
+            "provider_message_id": f"eq.{provider_message_id}",
+            "select": "id,campaign_id",
+        })
+        if rows:
+            queue_id   = rows[0]["id"]
+            campaign_id = rows[0].get("campaign_id")
+    except Exception:
+        pass
+
+    # Event kaydet
+    try:
+        sb_insert("email_events", {
+            "queue_id":    queue_id,
+            "campaign_id": campaign_id,
+            "to_email":    to_email,
+            "event_type":  event_type,
+            "metadata":    data,
+        })
+    except Exception as e:
+        logger.warning(f"resend_webhook event insert failed: {e}")
+
+    # Bounce / complained → otomatik suppression
+    if event_type in ("email.bounced", "email.complained"):
+        reason = "bounced" if event_type == "email.bounced" else "complained"
+        add_suppression(to_email, reason=reason, source="webhook")
+
+    return jsonify({"ok": True})
+
+
+start_scheduler()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5050))

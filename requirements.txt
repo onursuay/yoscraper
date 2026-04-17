@@ -13,3 +13,5 @@ dnspython>=2.4.0
 firecrawl-py>=1.0.0
 openai>=1.0.0
 openpyxl>=3.1.0
+itsdangerous>=2.1.0
+APScheduler>=3.10.0

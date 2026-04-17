@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <title>Yo Scraper — Marketing</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+        .container { max-width:1200px; margin:0 auto; padding:24px 32px 80px; }
+
+        /* Page header */
+        .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+        .page-title { font-size:22px; font-weight:800; color:#f1f5f9; }
+        .btn { padding:10px 20px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; text-decoration:none; display:inline-flex; align-items:center; gap:7px; }
+        .btn-primary { background:#3b82f6; color:#fff; }
+        .btn-primary:hover { background:#2563eb; }
+        .btn-sm { padding:6px 14px; font-size:12px; }
+        .btn-danger { background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+        .btn-danger:hover { background:rgba(239,68,68,.25); }
+        .btn-ghost { background:transparent; border:1px solid #334155; color:#94a3b8; }
+        .btn-ghost:hover { border-color:#3b82f6; color:#e2e8f0; }
+
+        /* Stats */
+        .stats-bar { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+        .stat-card { background:#1e293b; border:1px solid #334155; border-radius:10px; padding:16px 20px; flex:1; min-width:140px; }
+        .stat-card .label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+        .stat-card .value { font-size:26px; font-weight:700; color:#f1f5f9; }
+        .stat-card .value.blue { color:#3b82f6; }
+        .stat-card .value.green { color:#22c55e; }
+        .stat-card .value.yellow { color:#f59e0b; }
+
+        /* Card */
+        .card { background:#1e293b; border:1px solid #334155; border-radius:12px; overflow:hidden; }
+        .card-header { padding:14px 18px; border-bottom:1px solid #334155; display:flex; align-items:center; justify-content:space-between; }
+        .card-title { font-size:13px; font-weight:700; color:#f1f5f9; text-transform:uppercase; letter-spacing:.5px; }
+
+        /* Table */
+        .table { width:100%; border-collapse:collapse; }
+        .table th { padding:10px 14px; text-align:left; font-size:11px; text-transform:uppercase; color:#64748b; background:#172133; border-bottom:1px solid #334155; }
+        .table td { padding:10px 14px; font-size:13px; color:#cbd5e1; border-bottom:1px solid rgba(51,65,85,.3); vertical-align:middle; }
+        .table tr:hover td { background:rgba(59,130,246,.04); }
+        .table td a { color:#3b82f6; text-decoration:none; font-weight:500; }
+        .table td a:hover { text-decoration:underline; }
+
+        /* Badges */
+        .badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-draft     { background:rgba(100,116,139,.2); color:#94a3b8; }
+        .badge-running   { background:rgba(34,197,94,.15); color:#22c55e; }
+        .badge-scheduled { background:rgba(59,130,246,.15); color:#60a5fa; }
+        .badge-completed { background:rgba(148,163,184,.15); color:#94a3b8; }
+        .badge-cancelled { background:rgba(239,68,68,.15); color:#ef4444; }
+        .badge-paused    { background:rgba(245,158,11,.15); color:#f59e0b; }
+        .type-badge { padding:2px 8px; border-radius:6px; font-size:11px; }
+        .type-broadcast { background:rgba(139,92,246,.15); color:#a78bfa; }
+        .type-sequence  { background:rgba(20,184,166,.15); color:#2dd4bf; }
+
+        .empty-msg { text-align:center; padding:48px; color:#475569; font-size:13px; }
+
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+    </style>
+</head>
+<body>
+
+{% include 'header.html' %}
+
+<div class="container">
+
+    <div class="page-header">
+        <h1 class="page-title" data-i18n="mkt-title">Email Pazarlama</h1>
+        <a href="/marketing/campaigns/new" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span data-i18n="mkt-new-campaign">Yeni Kampanya</span>
+        </a>
+    </div>
+
+    <!-- Overview Stats -->
+    <div class="stats-bar" id="overviewStats">
+        <div class="stat-card">
+            <div class="label" data-i18n="mkt-sent-30d">Son 30 Gün Gönderim</div>
+            <div class="value blue" id="ov-sent">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label" data-i18n="mkt-open-rate">Açılma Oranı</div>
+            <div class="value green" id="ov-open-rate">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label" data-i18n="mkt-active-cmp">Aktif Kampanya</div>
+            <div class="value yellow" id="ov-active">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="label" data-i18n="mkt-suppressions">Suppression</div>
+            <div class="value" id="ov-suppressed">—</div>
+        </div>
+    </div>
+
+    <!-- Campaign List -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title" data-i18n="mkt-campaigns">Kampanyalar</span>
+            <button class="btn btn-ghost btn-sm" onclick="loadCampaigns()" data-i18n="mkt-refresh">Yenile</button>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th data-i18n="mkt-th-name">Ad</th>
+                        <th data-i18n="mkt-th-type">Tür</th>
+                        <th data-i18n="mkt-th-status">Durum</th>
+                        <th data-i18n="mkt-th-created">Oluşturuldu</th>
+                        <th data-i18n="mkt-th-actions">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody id="campaignTableBody">
+                    <tr><td colspan="5" class="empty-msg" data-i18n="mkt-loading">Yükleniyor...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function statusBadge(s) {
+    const map = {
+        draft:'badge-draft', running:'badge-running', scheduled:'badge-scheduled',
+        completed:'badge-completed', cancelled:'badge-cancelled', paused:'badge-paused'
+    };
+    const labelTr = {draft:'Taslak',running:'Çalışıyor',scheduled:'Zamanlandı',completed:'Tamamlandı',cancelled:'İptal',paused:'Durduruldu'};
+    const labelEn = {draft:'Draft',running:'Running',scheduled:'Scheduled',completed:'Completed',cancelled:'Cancelled',paused:'Paused'};
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const label = (lang === 'en' ? labelEn : labelTr)[s] || s;
+    return `<span class="badge ${map[s]||'badge-draft'}">${label}</span>`;
+}
+function typeBadge(tp) {
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    if (tp === 'sequence') return `<span class="type-badge type-sequence">${lang==='en'?'Sequence':'Sekans'}</span>`;
+    return `<span class="type-badge type-broadcast">Broadcast</span>`;
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+async function loadCampaigns() {
+    try {
+        const resp = await fetch('/api/marketing/campaigns');
+        const data = await resp.json();
+        const tbody = document.getElementById('campaignTableBody');
+        if (!data.length) {
+            const lang = localStorage.getItem('lp_lang') || 'tr';
+            tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">${lang==='en'?'No campaigns yet. Create your first campaign.':'Henüz kampanya yok. İlk kampanyanızı oluşturun.'}</td></tr>`;
+            return;
+        }
+        const lang = localStorage.getItem('lp_lang') || 'tr';
+        tbody.innerHTML = data.map(c => `
+            <tr>
+                <td><a href="/marketing/campaigns/${c.id}">${c.name}</a></td>
+                <td>${typeBadge(c.type)}</td>
+                <td>${statusBadge(c.status)}</td>
+                <td style="color:#64748b;font-size:12px;">${fmtDate(c.created_at)}</td>
+                <td>
+                    <a href="/marketing/campaigns/${c.id}" class="btn btn-ghost btn-sm" style="font-size:11px;">${t('mkt-detail','Detay')}</a>
+                    ${c.status === 'draft' ? `<button onclick="launchCampaign('${c.id}')" class="btn btn-primary btn-sm" style="margin-left:4px;font-size:11px;">${t('mkt-launch','Başlat')}</button>` : ''}
+                    ${c.status === 'running' ? `<button onclick="cancelCampaign('${c.id}')" class="btn btn-danger btn-sm" style="margin-left:4px;font-size:11px;">${t('mkt-cancel','İptal')}</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    } catch(e) { console.error(e); }
+}
+
+async function loadStats() {
+    try {
+        const r = await fetch('/api/marketing/stats');
+        const s = await r.json();
+        document.getElementById('ov-sent').textContent = s.sent_30d ?? '—';
+        document.getElementById('ov-open-rate').textContent = s.open_rate_30d != null ? s.open_rate_30d + '%' : '—';
+        document.getElementById('ov-active').textContent = s.active_campaigns ?? '—';
+        document.getElementById('ov-suppressed').textContent = s.total_suppressions ?? '—';
+    } catch(e) {}
+}
+
+async function launchCampaign(id) {
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const msg = lang === 'en' ? 'Launch this campaign?' : 'Kampanya başlatılsın mı?';
+    if (!confirm(msg)) return;
+    const r = await fetch(`/api/marketing/campaigns/${id}/launch`, {method:'POST'});
+    const d = await r.json();
+    if (d.error) { alert(d.error); return; }
+    loadCampaigns();
+}
+
+async function cancelCampaign(id) {
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const msg = lang === 'en' ? 'Cancel this campaign?' : 'Kampanya iptal edilsin mi?';
+    if (!confirm(msg)) return;
+    await fetch(`/api/marketing/campaigns/${id}/cancel`, {method:'POST'});
+    loadCampaigns();
+}
+
+loadStats();
+loadCampaigns();
+</script>
+
+</body>
+</html>

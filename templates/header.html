@@ -138,6 +138,10 @@
             <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             Send Mail
         </a>
+        <a href="/marketing" id="nav-marketing">
+            <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span data-i18n="mkt-nav">Pazarlama</span>
+        </a>
     </nav>
 
     <!-- Language Switcher -->
@@ -234,7 +238,13 @@
         '/domains': 'nav-database',
         '/sendmail': 'nav-sendmail',
         '/clickbot': 'nav-clickbot',
+        '/marketing': 'nav-marketing',
     };
+    // marketing alt sayfaları için de aktif yap
+    if (location.pathname.startsWith('/marketing')) {
+        const el = document.getElementById('nav-marketing');
+        if (el) el.classList.add('active');
+    }
     const activeId = navMap[path];
     if (activeId) {
         document.getElementById(activeId).classList.add('active');

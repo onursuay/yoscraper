@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <title>Yo Scraper — Yeni Kampanya</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+        .container { max-width:860px; margin:0 auto; padding:24px 32px 80px; }
+
+        .page-header { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
+        .page-header a { color:#64748b; text-decoration:none; font-size:13px; }
+        .page-header a:hover { color:#e2e8f0; }
+        .page-title { font-size:20px; font-weight:800; color:#f1f5f9; }
+
+        /* Wizard steps */
+        .wizard-steps { display:flex; gap:0; margin-bottom:32px; }
+        .wizard-step { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; }
+        .wizard-step:not(:last-child)::after { content:''; position:absolute; top:15px; left:50%; width:100%; height:2px; background:#334155; z-index:0; }
+        .step-dot { width:30px; height:30px; border-radius:50%; background:#1e293b; border:2px solid #334155; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#64748b; z-index:1; transition:all .2s; }
+        .step-dot.active { border-color:#3b82f6; background:#3b82f6; color:#fff; }
+        .step-dot.done { border-color:#22c55e; background:#22c55e; color:#fff; }
+        .step-label { font-size:11px; color:#64748b; margin-top:6px; text-align:center; font-weight:500; }
+        .step-label.active { color:#3b82f6; }
+        .step-label.done { color:#22c55e; }
+
+        /* Card */
+        .card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:24px; margin-bottom:16px; }
+        .card-title { font-size:14px; font-weight:700; color:#f1f5f9; margin-bottom:18px; }
+
+        /* Form */
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; font-size:12px; color:#94a3b8; margin-bottom:6px; font-weight:500; }
+        .form-group input, .form-group textarea, .form-group select {
+            width:100%; padding:10px 12px; background:#0f172a; border:1px solid #334155;
+            border-radius:8px; color:#e2e8f0; font-size:13px; outline:none; font-family:inherit;
+            appearance:none; -webkit-appearance:none;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:#3b82f6; }
+        .form-group textarea { min-height:160px; resize:vertical; }
+        .form-hint { font-size:11px; color:#475569; margin-top:5px; }
+
+        /* Type selector */
+        .type-selector { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .type-option { border:2px solid #334155; border-radius:10px; padding:16px; cursor:pointer; transition:all .15s; }
+        .type-option.selected { border-color:#3b82f6; background:rgba(59,130,246,.06); }
+        .type-option:hover:not(.selected) { border-color:#475569; }
+        .type-icon { font-size:24px; margin-bottom:8px; }
+        .type-name { font-size:13px; font-weight:700; color:#f1f5f9; margin-bottom:4px; }
+        .type-desc { font-size:11px; color:#64748b; line-height:1.5; }
+
+        /* Segment preview */
+        .segment-preview { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px 16px; display:flex; align-items:center; gap:10px; margin-top:8px; }
+        .preview-count { font-size:22px; font-weight:800; color:#3b82f6; }
+        .preview-label { font-size:12px; color:#64748b; }
+        .preview-spinner { width:18px; height:18px; border:2px solid #334155; border-top-color:#3b82f6; border-radius:50%; animation:spin .7s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* Steps builder (sequence) */
+        .steps-list { display:flex; flex-direction:column; gap:12px; }
+        .step-item { background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px 16px; position:relative; }
+        .step-item-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+        .step-num { font-size:11px; font-weight:700; color:#64748b; background:#1e293b; padding:3px 8px; border-radius:4px; }
+        .step-remove { position:absolute; top:12px; right:12px; background:none; border:none; color:#475569; cursor:pointer; font-size:16px; padding:2px 6px; border-radius:4px; }
+        .step-remove:hover { color:#ef4444; background:rgba(239,68,68,.1); }
+        .step-row { display:grid; grid-template-columns:120px 1fr; gap:10px; margin-bottom:10px; }
+        .btn-add-step { width:100%; padding:10px; background:rgba(59,130,246,.08); border:1px dashed #334155; border-radius:8px; color:#3b82f6; font-size:13px; font-weight:600; cursor:pointer; margin-top:8px; transition:all .15s; }
+        .btn-add-step:hover { background:rgba(59,130,246,.14); border-color:#3b82f6; }
+
+        /* Schedule */
+        .schedule-options { display:flex; flex-direction:column; gap:8px; }
+        .schedule-option { display:flex; align-items:center; gap:10px; padding:12px 14px; background:#0f172a; border:1px solid #334155; border-radius:8px; cursor:pointer; transition:border-color .15s; }
+        .schedule-option.selected { border-color:#3b82f6; }
+        .schedule-option input[type=radio] { accent-color:#3b82f6; }
+        .schedule-label { font-size:13px; font-weight:600; color:#e2e8f0; }
+        .schedule-sub { font-size:11px; color:#64748b; }
+        .schedule-extra { margin-top:8px; margin-left:34px; }
+
+        /* Navigation buttons */
+        .wizard-nav { display:flex; justify-content:space-between; margin-top:20px; }
+        .btn { padding:10px 20px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
+        .btn-primary { background:#3b82f6; color:#fff; }
+        .btn-primary:hover { background:#2563eb; }
+        .btn-primary:disabled { background:#334155; color:#64748b; cursor:not-allowed; }
+        .btn-ghost { background:transparent; border:1px solid #334155; color:#94a3b8; }
+        .btn-ghost:hover { border-color:#3b82f6; color:#e2e8f0; }
+
+        /* Variables hint */
+        code { color:#3b82f6; background:rgba(59,130,246,.1); padding:1px 5px; border-radius:3px; font-size:12px; }
+
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+    </style>
+</head>
+<body>
+
+{% include 'header.html' %}
+
+<div class="container">
+
+    <div class="page-header">
+        <a href="/marketing" data-i18n="mkt-back">← Pazarlama</a>
+        <h1 class="page-title" data-i18n="mkt-new-campaign-title">Yeni Kampanya</h1>
+    </div>
+
+    <!-- Wizard steps indicator -->
+    <div class="wizard-steps">
+        <div class="wizard-step" id="step-ind-1">
+            <div class="step-dot active" id="dot-1">1</div>
+            <div class="step-label active" data-i18n="mkt-ws-type">Tür</div>
+        </div>
+        <div class="wizard-step" id="step-ind-2">
+            <div class="step-dot" id="dot-2">2</div>
+            <div class="step-label" data-i18n="mkt-ws-segment">Segment</div>
+        </div>
+        <div class="wizard-step" id="step-ind-3">
+            <div class="step-dot" id="dot-3">3</div>
+            <div class="step-label" data-i18n="mkt-ws-content">İçerik</div>
+        </div>
+        <div class="wizard-step" id="step-ind-4">
+            <div class="step-dot" id="dot-4">4</div>
+            <div class="step-label" data-i18n="mkt-ws-schedule">Zamanlama</div>
+        </div>
+    </div>
+
+    <!-- Step 1: Name + Type -->
+    <div id="step-1">
+        <div class="card">
+            <div class="card-title" data-i18n="mkt-ws-type-title">Kampanya Adı ve Türü</div>
+            <div class="form-group">
+                <label data-i18n="mkt-field-name">Kampanya Adı</label>
+                <input type="text" id="f-name" placeholder="Örn: Mart 2025 Teknoloji Kampanyası" data-i18n-ph="mkt-name-ph">
+            </div>
+            <div class="form-group">
+                <label data-i18n="mkt-field-type">Kampanya Türü</label>
+                <div class="type-selector">
+                    <div class="type-option selected" onclick="selectType('broadcast')" id="opt-broadcast">
+                        <div class="type-icon">📣</div>
+                        <div class="type-name">Broadcast</div>
+                        <div class="type-desc" data-i18n="mkt-type-bc-desc">Seçili segmente tek seferlik e-posta gönderimi.</div>
+                    </div>
+                    <div class="type-option" onclick="selectType('sequence')" id="opt-sequence">
+                        <div class="type-icon">⚡</div>
+                        <div class="type-name" data-i18n="mkt-type-seq">Sekans (Drip)</div>
+                        <div class="type-desc" data-i18n="mkt-type-seq-desc">Birden fazla adımdan oluşan otomatik e-posta serisi.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Segment -->
+    <div id="step-2" style="display:none;">
+        <div class="card">
+            <div class="card-title" data-i18n="mkt-ws-seg-title">Hedef Segment</div>
+            <div class="form-group">
+                <label data-i18n="mkt-seg-sector">Sektör</label>
+                <select id="f-sector" onchange="debouncePreview()">
+                    <option value="" data-i18n="mkt-seg-all-sectors">Tüm Sektörler</option>
+                    {% for sector in sectors %}
+                    <option value="{{ sector }}">{{ sector }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label data-i18n="mkt-seg-name">Firma Adı İçerir</label>
+                <input type="text" id="f-name-filter" placeholder="..." oninput="debouncePreview()">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group">
+                    <label data-i18n="mkt-seg-from">Kayıt Tarihi Başlangıç</label>
+                    <input type="date" id="f-date-from" onchange="debouncePreview()">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="mkt-seg-to">Kayıt Tarihi Bitiş</label>
+                    <input type="date" id="f-date-to" onchange="debouncePreview()">
+                </div>
+            </div>
+            <!-- Preview -->
+            <div class="segment-preview">
+                <div id="preview-spinner" class="preview-spinner" style="display:none;"></div>
+                <div class="preview-count" id="preview-count">—</div>
+                <div class="preview-label" data-i18n="mkt-seg-match">lead eşleşiyor</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Content -->
+    <div id="step-3" style="display:none;">
+        <!-- Broadcast: single subject+body -->
+        <div id="content-broadcast">
+            <div class="card">
+                <div class="card-title" data-i18n="mkt-ws-cont-title">E-posta İçeriği</div>
+                <div class="form-group">
+                    <label data-i18n="mkt-field-subject">Konu</label>
+                    <input type="text" id="f-subject" placeholder="İş Birliği Teklifi" data-i18n-ph="mkt-subj-ph">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="mkt-field-body">İçerik (HTML)</label>
+                    <textarea id="f-body" placeholder="HTML mail içeriği..."></textarea>
+                    <div class="form-hint"><span data-i18n="mkt-vars">Değişkenler:</span> <code>{firma_adi}</code> <code>{sektor}</code> <code>{domain}</code> <code>{email}</code></div>
+                </div>
+            </div>
+        </div>
+        <!-- Sequence: steps builder -->
+        <div id="content-sequence" style="display:none;">
+            <div class="card">
+                <div class="card-title" data-i18n="mkt-ws-steps-title">Sekans Adımları</div>
+                <div class="form-hint" style="margin-bottom:14px;" data-i18n="mkt-steps-hint">Her adım için bekleme süresi ve e-posta içeriği tanımlayın. Adımlar sırayla gönderilir.</div>
+                <div class="steps-list" id="steps-list"></div>
+                <button class="btn-add-step" onclick="addStep()" data-i18n="mkt-add-step">+ Adım Ekle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Schedule -->
+    <div id="step-4" style="display:none;">
+        <div class="card">
+            <div class="card-title" data-i18n="mkt-ws-sched-title">Gönderim Zamanlaması</div>
+            <div class="schedule-options">
+                <label class="schedule-option selected" id="sched-now">
+                    <input type="radio" name="schedule" value="now" checked onchange="selectSchedule('now')">
+                    <div>
+                        <div class="schedule-label" data-i18n="mkt-sched-now">Hemen Gönder</div>
+                        <div class="schedule-sub" data-i18n="mkt-sched-now-sub">Kampanya başlatıldıktan sonra hemen kuyruğa alınır.</div>
+                    </div>
+                </label>
+                <label class="schedule-option" id="sched-later">
+                    <input type="radio" name="schedule" value="later" onchange="selectSchedule('later')">
+                    <div>
+                        <div class="schedule-label" data-i18n="mkt-sched-later">Belirli Tarih/Saat</div>
+                        <div class="schedule-sub" data-i18n="mkt-sched-later-sub">İstediğiniz tarih ve saatte gönderilir.</div>
+                    </div>
+                </label>
+                <div class="schedule-extra" id="sched-later-input" style="display:none;">
+                    <input type="datetime-local" id="f-scheduled-at" style="padding:9px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:13px;outline:none;appearance:none;-webkit-appearance:none;">
+                </div>
+            </div>
+            <div class="form-hint" style="margin-top:14px;" data-i18n="mkt-sched-hint">Sekans kampanyalarında zamanlama ilk adım için geçerlidir. Sonraki adımlar her adımın kendi gecikmesi kadar bekler.</div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="wizard-nav">
+        <button class="btn btn-ghost" id="btnBack" onclick="prevStep()" style="display:none;" data-i18n="mkt-back-btn">← Geri</button>
+        <div style="margin-left:auto;">
+            <button class="btn btn-primary" id="btnNext" onclick="nextStep()" data-i18n="mkt-next-btn">Devam →</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const TOTAL_STEPS = 4;
+let currentStep = 1;
+let selectedType = 'broadcast';
+let stepCount = 0;
+let previewTimer = null;
+
+const sectors = {{ sectors | tojson }};
+
+function selectType(type) {
+    selectedType = type;
+    document.getElementById('opt-broadcast').classList.toggle('selected', type === 'broadcast');
+    document.getElementById('opt-sequence').classList.toggle('selected', type === 'sequence');
+}
+
+function selectSchedule(mode) {
+    ['now','later'].forEach(m => document.getElementById('sched-'+m).classList.toggle('selected', m === mode));
+    document.getElementById('sched-later-input').style.display = mode === 'later' ? 'block' : 'none';
+}
+
+function updateStepIndicator() {
+    for (let i = 1; i <= TOTAL_STEPS; i++) {
+        const dot = document.getElementById('dot-'+i);
+        const lbl = document.getElementById('step-ind-'+i).querySelector('.step-label');
+        dot.classList.remove('active','done');
+        lbl.classList.remove('active','done');
+        if (i < currentStep) { dot.classList.add('done'); dot.textContent = '✓'; lbl.classList.add('done'); }
+        else if (i === currentStep) { dot.classList.add('active'); dot.textContent = i; lbl.classList.add('active'); }
+        else { dot.textContent = i; }
+    }
+    document.getElementById('btnBack').style.display = currentStep > 1 ? 'inline-flex' : 'none';
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const btnNext = document.getElementById('btnNext');
+    if (currentStep === TOTAL_STEPS) {
+        btnNext.textContent = lang === 'en' ? '🚀 Create Campaign' : '🚀 Kampanyayı Oluştur';
+    } else {
+        btnNext.textContent = lang === 'en' ? 'Continue →' : 'Devam →';
+    }
+}
+
+function showStep(n) {
+    for (let i = 1; i <= TOTAL_STEPS; i++) document.getElementById('step-'+i).style.display = i === n ? 'block' : 'none';
+}
+
+function nextStep() {
+    if (!validateStep()) return;
+    if (currentStep === TOTAL_STEPS) { createCampaign(); return; }
+    currentStep++;
+    showStep(currentStep);
+    updateStepIndicator();
+    if (currentStep === 2) doPreview();
+    if (currentStep === 3) {
+        document.getElementById('content-broadcast').style.display = selectedType === 'broadcast' ? 'block' : 'none';
+        document.getElementById('content-sequence').style.display = selectedType === 'sequence' ? 'block' : 'none';
+        if (selectedType === 'sequence' && stepCount === 0) addStep();
+    }
+}
+
+function prevStep() {
+    if (currentStep <= 1) return;
+    currentStep--;
+    showStep(currentStep);
+    updateStepIndicator();
+}
+
+function validateStep() {
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    if (currentStep === 1) {
+        const name = document.getElementById('f-name').value.trim();
+        if (!name) { alert(lang === 'en' ? 'Please enter a campaign name.' : 'Kampanya adı giriniz.'); return false; }
+    }
+    if (currentStep === 3) {
+        if (selectedType === 'broadcast') {
+            if (!document.getElementById('f-subject').value.trim()) { alert(lang==='en'?'Enter email subject.':'Konu giriniz.'); return false; }
+            if (!document.getElementById('f-body').value.trim()) { alert(lang==='en'?'Enter email content.':'Mail içeriği giriniz.'); return false; }
+        } else {
+            const steps = collectSteps();
+            if (!steps.length) { alert(lang==='en'?'Add at least one step.':'En az bir adım ekleyiniz.'); return false; }
+            for (const s of steps) {
+                if (!s.subject || !s.body_html) { alert(lang==='en'?'All steps must have subject and content.':'Tüm adımların konusu ve içeriği olmalı.'); return false; }
+            }
+        }
+    }
+    return true;
+}
+
+// ── Segment preview ──
+function debouncePreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(doPreview, 600);
+}
+
+async function doPreview() {
+    document.getElementById('preview-spinner').style.display = 'inline-block';
+    document.getElementById('preview-count').style.display = 'none';
+    const params = new URLSearchParams({
+        sector: document.getElementById('f-sector').value,
+        name_contains: document.getElementById('f-name-filter').value,
+        date_from: document.getElementById('f-date-from').value,
+        date_to: document.getElementById('f-date-to').value,
+    });
+    try {
+        const r = await fetch('/api/marketing/segment/preview?' + params);
+        const d = await r.json();
+        document.getElementById('preview-count').textContent = d.count ?? '—';
+    } catch(e) {
+        document.getElementById('preview-count').textContent = '—';
+    }
+    document.getElementById('preview-spinner').style.display = 'none';
+    document.getElementById('preview-count').style.display = 'inline';
+}
+
+// ── Steps builder ──
+function addStep() {
+    stepCount++;
+    const n = stepCount;
+    const lang = localStorage.getItem('lp_lang') || 'tr';
+    const delay = n === 1 ? '0' : '24';
+    const div = document.createElement('div');
+    div.className = 'step-item';
+    div.id = 'step-item-' + n;
+    div.innerHTML = `
+        <div class="step-item-header">
+            <span class="step-num">${lang==='en'?'Step':'Adım'} ${n}</span>
+        </div>
+        <button class="step-remove" onclick="removeStep(${n})" title="${lang==='en'?'Remove':'Kaldır'}">✕</button>
+        <div class="step-row">
+            <div class="form-group" style="margin-bottom:0;">
+                <label>${lang==='en'?'Wait (hours)':'Bekleme (saat)'}</label>
+                <input type="number" class="step-delay" min="0" value="${delay}" placeholder="24">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>${lang==='en'?'Subject':'Konu'}</label>
+                <input type="text" class="step-subject" placeholder="${lang==='en'?'Email subject':'E-posta konusu'}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>${lang==='en'?'Content (HTML)':'İçerik (HTML)'}</label>
+            <textarea class="step-body" style="min-height:120px;" placeholder="HTML..."></textarea>
+        </div>
+    `;
+    document.getElementById('steps-list').appendChild(div);
+}
+
+function removeStep(n) {
+    const el = document.getElementById('step-item-' + n);
+    if (el) el.remove();
+}
+
+function collectSteps() {
+    return Array.from(document.querySelectorAll('.step-item')).map((item, i) => ({
+        step_order: i,
+        delay_hours: parseInt(item.querySelector('.step-delay').value) || 0,
+        subject: item.querySelector('.step-subject').value.trim(),
+        body_html: item.querySelector('.step-body').value.trim(),
+    }));
+}
+
+// ── Create campaign ──
+async function createCampaign() {
+    const btn = document.getElementById('btnNext');
+    btn.disabled = true;
+
+    const schedMode = document.querySelector('input[name=schedule]:checked')?.value || 'now';
+    const scheduledAt = schedMode === 'later' ? document.getElementById('f-scheduled-at').value : null;
+
+    const payload = {
+        name:  document.getElementById('f-name').value.trim(),
+        type:  selectedType,
+        segment_filter: {
+            sector:       document.getElementById('f-sector').value,
+            name_contains: document.getElementById('f-name-filter').value,
+            date_from:    document.getElementById('f-date-from').value,
+            date_to:      document.getElementById('f-date-to').value,
+        },
+        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+    };
+
+    if (selectedType === 'broadcast') {
+        payload.subject  = document.getElementById('f-subject').value.trim();
+        payload.body_html = document.getElementById('f-body').value.trim();
+    } else {
+        payload.steps = collectSteps();
+        // Use first step subject as campaign subject
+        payload.subject  = payload.steps[0]?.subject || '';
+        payload.body_html = payload.steps[0]?.body_html || '';
+    }
+
+    try {
+        const r = await fetch('/api/marketing/campaigns', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload),
+        });
+        const d = await r.json();
+        if (d.error) { alert(d.error); btn.disabled = false; return; }
+
+        // Auto-launch if scheduled_at is null (now)
+        if (!scheduledAt) {
+            const lr = await fetch(`/api/marketing/campaigns/${d.id}/launch`, {method:'POST'});
+            const ld = await lr.json();
+            if (ld.error) { alert(ld.error); window.location.href = `/marketing/campaigns/${d.id}`; return; }
+        }
+        window.location.href = `/marketing/campaigns/${d.id}`;
+    } catch(e) {
+        alert('Hata: ' + e.message);
+        btn.disabled = false;
+    }
+}
+
+// Init
+updateStepIndicator();
+showStep(1);
+</script>
+
+</body>
+</html>
