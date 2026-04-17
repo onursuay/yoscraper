@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <title>Genel Bakış — Yo Scraper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+{% include 'header.html' %}
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f9fafb; color: #111827; min-height: 100vh; }
+
+.db-topbar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+.db-topbar-left h1 { font-size: 22px; font-weight: 700; color: #111827; }
+.db-topbar-left p { font-size: 13px; color: #6b7280; margin-top: 3px; }
+.db-topbar-right { display: flex; align-items: center; gap: 10px; }
+.db-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 9999px; }
+.db-badge.scanning { background: #dcfce7; color: #15803d; }
+.db-badge.idle { background: #f3f4f6; color: #6b7280; }
+.db-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+.db-badge.scanning .dot { background: #16a34a; animation: pulse 1.5s infinite; }
+.db-badge.idle .dot { background: #9ca3af; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.db-body { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
+
+/* KPI row */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+@media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 540px) { .kpi-row { grid-template-columns: 1fr; } }
+
+.kpi-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px 22px; }
+.kpi-card .kc-label { font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+.kpi-card .kc-label svg { width: 14px; height: 14px; color: #9ca3af; flex-shrink: 0; }
+.kpi-card .kc-val { font-size: 28px; font-weight: 700; color: #111827; line-height: 1.1; }
+.kpi-card .kc-sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+.kpi-card .kc-delta { font-size: 12px; font-weight: 500; margin-top: 6px; }
+.kpi-card .kc-delta.up { color: #16a34a; }
+.kpi-card .kc-delta.neutral { color: #9ca3af; }
+
+/* Module grid */
+.mod-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+@media (max-width: 1024px) { .mod-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 640px) { .mod-grid { grid-template-columns: 1fr; } }
+
+.mod-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 22px; transition: border-color 0.2s, box-shadow 0.2s; text-decoration: none; display: block; }
+.mod-card:hover { border-color: #2BB673; box-shadow: 0 4px 16px rgba(43,182,115,0.08); }
+.mod-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.mod-card-icon { width: 38px; height: 38px; border-radius: 10px; background: rgba(43,182,115,0.08); border: 1px solid rgba(43,182,115,0.15); display: flex; align-items: center; justify-content: center; color: #2BB673; }
+.mod-card-icon svg { width: 18px; height: 18px; }
+.mod-card-status { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 9999px; }
+.mod-card-status.active { background: #dcfce7; color: #15803d; }
+.mod-card-status.inactive { background: #f3f4f6; color: #6b7280; }
+.mod-card h3 { font-size: 15px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+.mod-card p { font-size: 13px; color: #6b7280; line-height: 1.5; }
+.mod-card .mod-stats { margin-top: 14px; display: flex; gap: 20px; }
+.mod-stat { display: flex; flex-direction: column; gap: 2px; }
+.mod-stat .ms-val { font-size: 18px; font-weight: 700; color: #111827; }
+.mod-stat .ms-lbl { font-size: 11px; color: #9ca3af; font-weight: 500; }
+.mod-card .mod-cta { margin-top: 16px; display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; color: #2BB673; }
+.mod-card .mod-cta svg { width: 14px; height: 14px; }
+
+/* Quick access */
+.qa-section h2 { font-size: 15px; font-weight: 600; color: #111827; margin-bottom: 14px; }
+.qa-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+@media (max-width: 1024px) { .qa-grid { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 540px) { .qa-grid { grid-template-columns: repeat(2,1fr); } }
+
+.qa-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 14px; text-align: center; text-decoration: none; transition: all 0.2s; }
+.qa-card:hover { border-color: #2BB673; background: rgba(43,182,115,0.03); }
+.qa-card .qa-icon { width: 36px; height: 36px; border-radius: 10px; background: #f9fafb; border: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #374151; }
+.qa-card .qa-icon svg { width: 16px; height: 16px; }
+.qa-card:hover .qa-icon { background: rgba(43,182,115,0.08); border-color: rgba(43,182,115,0.2); color: #2BB673; }
+.qa-card .qa-label { font-size: 12px; font-weight: 500; color: #374151; }
+.qa-card:hover .qa-label { color: #2BB673; }
+</style>
+
+<div class="db-topbar">
+    <div class="db-topbar-left">
+        <h1>Genel Bakış</h1>
+        <p>Tüm modüllerin ve araçlarınızın özeti</p>
+    </div>
+    <div class="db-topbar-right">
+        <div class="db-badge idle" id="scanBadge">
+            <span class="dot"></span>
+            <span id="scanBadgeText">Tarama Bekleniyor</span>
+        </div>
+    </div>
+</div>
+
+<div class="db-body">
+
+    <!-- KPI Row -->
+    <div class="kpi-row">
+        <div class="kpi-card">
+            <div class="kc-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                Taranan İşletme
+            </div>
+            <div class="kc-val" id="kpiTotal">—</div>
+            <div class="kc-sub">Veritabanındaki toplam kayıt</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kc-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                E-posta Bulunan
+            </div>
+            <div class="kc-val" id="kpiEmail">—</div>
+            <div class="kc-sub">E-posta adresi olan kayıt</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kc-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                Toplam Lead
+            </div>
+            <div class="kc-val" id="kpiLeads">—</div>
+            <div class="kc-sub">İçe aktarılan + taranan</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kc-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Aktif Kampanya
+            </div>
+            <div class="kc-val" id="kpiCampaigns">—</div>
+            <div class="kc-sub">Pazarlama kampanyaları</div>
+        </div>
+    </div>
+
+    <!-- Module Cards -->
+    <div class="mod-grid">
+
+        <!-- Scanner -->
+        <a href="/app" class="mod-card">
+            <div class="mod-card-head">
+                <div class="mod-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                </div>
+                <span class="mod-card-status inactive" id="scannerStatus">Bekleniyor</span>
+            </div>
+            <h3>Google Maps Tarayıcı</h3>
+            <p>Sektör ve şehir bazlı işletme taraması yapın. E-posta ve telefon bilgilerini otomatik çekin.</p>
+            <div class="mod-stats">
+                <div class="mod-stat">
+                    <span class="ms-val" id="modScanTotal">—</span>
+                    <span class="ms-lbl">Toplam Kayıt</span>
+                </div>
+                <div class="mod-stat">
+                    <span class="ms-val" id="modScanEmail">—</span>
+                    <span class="ms-lbl">E-posta Olan</span>
+                </div>
+            </div>
+            <div class="mod-cta">Panele Git <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+        </a>
+
+        <!-- Database -->
+        <a href="/database" class="mod-card">
+            <div class="mod-card-head">
+                <div class="mod-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                </div>
+                <span class="mod-card-status active">Aktif</span>
+            </div>
+            <h3>Veritabanı</h3>
+            <p>Tüm kaynaklardan gelen verileri tek panelde görüntüleyin, filtreleyin ve dışa aktarın.</p>
+            <div class="mod-stats">
+                <div class="mod-stat">
+                    <span class="ms-val" id="modDbTotal">—</span>
+                    <span class="ms-lbl">Toplam Kayıt</span>
+                </div>
+                <div class="mod-stat">
+                    <span class="ms-val" id="modDbLeads">—</span>
+                    <span class="ms-lbl">Lead</span>
+                </div>
+            </div>
+            <div class="mod-cta">Panele Git <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+        </a>
+
+        <!-- Import -->
+        <a href="/external" class="mod-card">
+            <div class="mod-card-head">
+                <div class="mod-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <span class="mod-card-status active">Aktif</span>
+            </div>
+            <h3>İçe Aktarma</h3>
+            <p>Excel, CSV veya Google Sheets'ten veri aktarın. Sütun eşleme sihirbazı ile kolayca yükleyin.</p>
+            <div class="mod-cta">Panele Git <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+        </a>
+
+        <!-- Marketing -->
+        <a href="/marketing" class="mod-card">
+            <div class="mod-card-head">
+                <div class="mod-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <span class="mod-card-status active">Aktif</span>
+            </div>
+            <h3>E-posta Pazarlama</h3>
+            <p>Kampanya oluşturun, otomatik sekanslar kurun ve toplu e-posta gönderin.</p>
+            <div class="mod-stats">
+                <div class="mod-stat">
+                    <span class="ms-val" id="modMktCampaigns">—</span>
+                    <span class="ms-lbl">Kampanya</span>
+                </div>
+                <div class="mod-stat">
+                    <span class="ms-val" id="modMktSent">—</span>
+                    <span class="ms-lbl">Gönderilen</span>
+                </div>
+            </div>
+            <div class="mod-cta">Panele Git <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+        </a>
+
+        <!-- Click Bot -->
+        <a href="/clickbot" class="mod-card">
+            <div class="mod-card-head">
+                <div class="mod-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
+                </div>
+                <span class="mod-card-status inactive" id="cbStatus">Bekleniyor</span>
+            </div>
+            <h3>Click Bot</h3>
+            <p>Google Ads tıklama takibi ve rakip analizi. Otomatik çizelge ile zamanlanmış tarama yapın.</p>
+            <div class="mod-stats">
+                <div class="mod-stat">
+                    <span class="ms-val" id="modCbClicks">—</span>
+                    <span class="ms-lbl">Toplam Tıklama</span>
+                </div>
+            </div>
+            <div class="mod-cta">Panele Git <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+        </a>
+
+        <!-- Send Mail -->
+        <a href="/sendmail" class="mod-card">
+            <div class="mod-card-head">
+                <div class="mod-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+                <span class="mod-card-status active">Aktif</span>
+            </div>
+            <h3>Toplu E-posta</h3>
+            <p>SMTP veya Gmail üzerinden veritabanındaki işletmelere kişiselleştirilmiş e-posta gönderin.</p>
+            <div class="mod-stats">
+                <div class="mod-stat">
+                    <span class="ms-val" id="modSmSent">—</span>
+                    <span class="ms-lbl">Gönderilen</span>
+                </div>
+            </div>
+            <div class="mod-cta">Panele Git <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+        </a>
+
+    </div>
+
+    <!-- Quick Access -->
+    <div class="qa-section">
+        <h2>Hızlı Erişim</h2>
+        <div class="qa-grid">
+            <a href="/app" class="qa-card">
+                <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+                <div class="qa-label">Tarayıcı</div>
+            </a>
+            <a href="/database" class="qa-card">
+                <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+                <div class="qa-label">Veritabanı</div>
+            </a>
+            <a href="/external" class="qa-card">
+                <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                <div class="qa-label">İçe Aktarma</div>
+            </a>
+            <a href="/marketing" class="qa-card">
+                <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                <div class="qa-label">Pazarlama</div>
+            </a>
+            <a href="/clickbot" class="qa-card">
+                <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg></div>
+                <div class="qa-label">Click Bot</div>
+            </a>
+            <a href="/account" class="qa-card">
+                <div class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                <div class="qa-label">Hesabım</div>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<script>
+(function() {
+    // Scanner status
+    fetch('/api/status').then(r => r.json()).then(d => {
+        const badge = document.getElementById('scanBadge');
+        const badgeText = document.getElementById('scanBadgeText');
+        const status = document.getElementById('scannerStatus');
+        if (d.running) {
+            badge.className = 'db-badge scanning';
+            badgeText.textContent = 'Taranıyor...';
+            status.className = 'mod-card-status active';
+            status.textContent = 'Çalışıyor';
+        }
+    }).catch(() => {});
+
+    // DB stats
+    fetch('/api/database?limit=1&offset=0').then(r => r.json()).then(d => {
+        const total = d.total || 0;
+        const withEmail = d.data ? d.data.filter(x => x.email).length : 0;
+        document.getElementById('kpiTotal').textContent = total.toLocaleString('tr-TR');
+        document.getElementById('modScanTotal').textContent = total.toLocaleString('tr-TR');
+        document.getElementById('modDbTotal').textContent = total.toLocaleString('tr-TR');
+    }).catch(() => {});
+
+    // Full DB for email count
+    fetch('/api/database?limit=9999&offset=0').then(r => r.json()).then(d => {
+        if (!d.data) return;
+        const withEmail = d.data.filter(x => x.email && x.email.trim()).length;
+        document.getElementById('kpiEmail').textContent = withEmail.toLocaleString('tr-TR');
+        document.getElementById('modScanEmail').textContent = withEmail.toLocaleString('tr-TR');
+    }).catch(() => {});
+
+    // Leads
+    fetch('/api/leads').then(r => r.json()).then(d => {
+        const total = d.total || 0;
+        document.getElementById('kpiLeads').textContent = total.toLocaleString('tr-TR');
+        document.getElementById('modDbLeads').textContent = total.toLocaleString('tr-TR');
+    }).catch(() => {});
+
+    // Campaigns
+    fetch('/marketing/api/campaigns').then(r => r.json()).then(d => {
+        const list = d.campaigns || d || [];
+        const count = Array.isArray(list) ? list.length : 0;
+        const active = Array.isArray(list) ? list.filter(c => c.status === 'active' || c.status === 'running').length : 0;
+        document.getElementById('kpiCampaigns').textContent = count;
+        document.getElementById('modMktCampaigns').textContent = count;
+    }).catch(() => {
+        document.getElementById('kpiCampaigns').textContent = '0';
+        document.getElementById('modMktCampaigns').textContent = '0';
+    });
+
+    // Send mail history count
+    fetch('/api/sendmail/history').then(r => r.json()).then(d => {
+        const list = d.history || d || [];
+        const sent = Array.isArray(list) ? list.filter(x => x.status === 'sent' || x.status === 'Gönderildi').length : 0;
+        document.getElementById('modSmSent').textContent = sent.toLocaleString('tr-TR');
+        document.getElementById('modMktSent').textContent = sent.toLocaleString('tr-TR');
+    }).catch(() => {
+        document.getElementById('modSmSent').textContent = '0';
+        document.getElementById('modMktSent').textContent = '0';
+    });
+
+    // Click Bot
+    fetch('/clickbot/api/stats').then(r => r.json()).then(d => {
+        const status = document.getElementById('cbStatus');
+        if (d.status === 'running') {
+            status.className = 'mod-card-status active';
+            status.textContent = 'Çalışıyor';
+        }
+        const clicks = d.total_clicks || d.clicks || 0;
+        document.getElementById('modCbClicks').textContent = clicks.toLocaleString('tr-TR');
+    }).catch(() => { document.getElementById('modCbClicks').textContent = '0'; });
+})();
+</script>
+</body>
+</html>

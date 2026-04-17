@@ -43,7 +43,7 @@ from auth_utils import (
 
 _PROTECTED = ('/app', '/external', '/database', '/domains', '/sendmail',
                '/marketing', '/clickbot', '/account',
-               '/faturalarim', '/abonelik', '/yardim')
+               '/faturalarim', '/abonelik', '/yardim', '/dashboard')
 
 
 @app.before_request
@@ -561,6 +561,11 @@ def abonelik():
 @app.route("/yardim")
 def yardim():
     return render_template("yardim.html")
+
+
+@app.route("/dashboard")
+def app_dashboard():
+    return render_template("app_dashboard.html")
 
 
 @app.route("/app")
