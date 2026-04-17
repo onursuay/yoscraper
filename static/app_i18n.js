@@ -242,6 +242,7 @@
             'mkt-prev-schedule':   'Schedule',
             'mkt-seg-date-range':  'Registration Date Range',
             'mkt-seg-date-ph':     'All dates',
+            'mkt-load-template':        'Load Default',
             'mkt-source-title':         'Data Source',
             'mkt-source-scanner-desc':  'Google Maps businesses',
             'mkt-source-import-desc':   'Imported contacts',

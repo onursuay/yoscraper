@@ -79,15 +79,17 @@ def _load_import_leads(filter_dict: dict) -> list[dict]:
         first = row[1].strip() if len(row) > 1 else ""
         last  = row[2].strip() if len(row) > 2 else ""
         leads.append({
-            "row_num": i,
-            "date":    row[0] if len(row) > 0 else "",
-            "name":    f"{first} {last}".strip() or email,
-            "phone":   row[3] if len(row) > 3 else "",
-            "email":   email,
-            "city":    row[5] if len(row) > 5 else "",
-            "sector":  "",
-            "domain":  "",
-            "website": "",
+            "row_num":    i,
+            "date":       row[0] if len(row) > 0 else "",
+            "name":       f"{first} {last}".strip() or email,
+            "first_name": first,
+            "last_name":  last,
+            "phone":      row[3] if len(row) > 3 else "",
+            "email":      email,
+            "city":       row[5] if len(row) > 5 else "",
+            "sector":     "",
+            "domain":     "",
+            "website":    "",
         })
 
     return _apply_import_filter(leads, filter_dict)

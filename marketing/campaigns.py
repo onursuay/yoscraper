@@ -372,6 +372,8 @@ def get_overview_stats() -> dict:
 def _render(template: str, lead: dict) -> str:
     return (template
             .replace("{firma_adi}", lead.get("name", ""))
+            .replace("{ad}",        lead.get("first_name", lead.get("name", "")))
+            .replace("{soyad}",     lead.get("last_name", ""))
             .replace("{email}",     lead.get("email", ""))
             .replace("{sektor}",    lead.get("sector", ""))
             .replace("{sehir}",     lead.get("city", ""))
