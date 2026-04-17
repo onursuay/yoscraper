@@ -6,254 +6,208 @@
     <link rel="icon" type="image/png" href="/static/logo.png">
     <title>Yo Scraper</title>
     <meta name="description" content="Yo Scraper is a business data collection tool that scans Google Maps, extracts contact information, and manages leads via Google Sheets.">
-    <meta name="application-name" content="Yo Scraper">
-    <meta property="og:title" content="Yo Scraper">
-    <meta property="og:description" content="Google Maps business scanner and lead management tool by YO Dijital.">
-    <meta property="og:url" content="https://scraper.yodijital.com">
-    <link rel="canonical" href="https://scraper.yodijital.com">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            min-height: 100vh;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; }
 
-        /* Two-column layout: sector panel + results */
-        .scanner-wrap {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            min-height: 100vh;
-            gap: 0;
-        }
+        .scanner-page { display: flex; flex-direction: column; min-height: 100vh; }
 
-        /* ── Sector Panel ── */
-        .sector-panel {
+        /* ── Top Toolbar ── */
+        .scan-toolbar {
             background: #fff;
-            border-right: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 24px;
             display: flex;
-            flex-direction: column;
-            height: 100vh;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
             position: sticky;
             top: 0;
-            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
         }
-        .sector-panel-head {
-            padding: 16px 16px 12px;
-            border-bottom: 1px solid #f3f4f6;
-            flex-shrink: 0;
+
+        .tb-select {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #fff;
+            color: #374151;
+            appearance: none;
+            -webkit-appearance: none;
+            outline: none;
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color 0.15s;
+            min-width: 160px;
+            max-width: 220px;
         }
-        .sector-panel-head h2 {
+        .tb-select:focus { border-color: #2BB673; }
+        .tb-select:disabled { opacity: 0.45; cursor: not-allowed; background: #f9fafb; }
+        .tb-select.filled { border-color: #2BB673; color: #111827; font-weight: 500; }
+
+        .tb-input {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #fff;
+            color: #374151;
+            outline: none;
+            font-family: inherit;
+            width: 80px;
+            transition: border-color 0.15s;
+        }
+        .tb-input:focus { border-color: #2BB673; }
+
+        .tb-label {
             font-size: 11px;
-            font-weight: 700;
+            font-weight: 600;
             color: #9ca3af;
             text-transform: uppercase;
-            letter-spacing: 0.07em;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
         }
-        .sector-groups { flex: 1; overflow-y: auto; padding: 8px; }
-        .sector-groups::-webkit-scrollbar { width: 3px; }
-        .sector-groups::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 2px; }
 
-        /* Sector group accordion */
-        .sg-group { margin-bottom: 2px; }
-        .sg-title {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px 10px; border-radius: 7px;
-            font-size: 12px; font-weight: 600; color: #374151;
-            cursor: pointer; background: none; border: none;
-            width: 100%; text-align: left; font-family: inherit;
-            transition: background 0.12s;
-        }
-        .sg-title:hover { background: #f9fafb; }
-        .sg-title .sg-icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.5; }
-        .sg-title .sg-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .sg-title .sg-chev {
-            width: 12px; height: 12px; flex-shrink: 0; fill: none;
-            stroke: #9ca3af; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-            transition: transform 0.2s;
-        }
-        .sg-group.open .sg-chev { transform: rotate(90deg); }
-
-        .sg-list { overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
-        .sg-group.open .sg-list { max-height: 600px; }
-
-        .sg-item {
-            padding: 6px 10px 6px 32px;
-            font-size: 12px; color: #6b7280;
-            cursor: pointer; border-radius: 6px;
-            transition: background 0.1s, color 0.1s;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .sg-item:hover { background: #f9fafb; color: #374151; }
-        .sg-item.selected { background: rgba(43,182,115,0.08); color: #2BB673; font-weight: 500; }
-
-        /* Scan controls */
-        .scan-controls {
-            border-top: 1px solid #f3f4f6;
-            padding: 14px 12px 80px;
+        .tb-sep {
+            width: 1px;
+            height: 28px;
+            background: #e5e7eb;
             flex-shrink: 0;
         }
-        .sc-selected {
-            font-size: 11px; color: #2BB673; font-weight: 600;
-            margin-bottom: 10px; min-height: 16px;
-        }
-        .sc-label {
-            font-size: 10px; font-weight: 700; color: #9ca3af;
-            text-transform: uppercase; letter-spacing: 0.06em;
-            display: block; margin-bottom: 4px;
-        }
-        .sc-select, .sc-input {
-            width: 100%; padding: 8px 10px; font-size: 12px;
-            border: 1px solid #e5e7eb; border-radius: 7px;
-            background: #fff; color: #374151; margin-bottom: 10px;
-            appearance: none; -webkit-appearance: none;
-            font-family: inherit; outline: none;
-        }
-        .sc-select:focus, .sc-input:focus { border-color: #2BB673; }
-        .scan-btns { display: flex; gap: 6px; margin-top: 4px; }
-        .scan-btn {
-            flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600;
-            border-radius: 7px; border: none; cursor: pointer;
-            font-family: inherit; transition: opacity 0.15s;
-        }
-        .scan-btn.start { background: #2BB673; color: #fff; }
-        .scan-btn.pause { background: #f59e0b; color: #fff; }
-        .scan-btn.stop  { background: #ef4444; color: #fff; }
-        .scan-btn:hover { opacity: 0.85; }
-        .scan-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-        /* ── Main Results Area ── */
+        .tb-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            transition: opacity 0.15s, box-shadow 0.15s;
+            white-space: nowrap;
+        }
+        .tb-btn.start { background: #2BB673; color: #fff; }
+        .tb-btn.start:hover { opacity: 0.9; }
+        .tb-btn.pause { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .tb-btn.pause:hover { opacity: 0.85; }
+        .tb-btn.stop  { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .tb-btn.stop:hover  { opacity: 0.85; }
+        .tb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .tb-btn.active-glow { box-shadow: 0 0 0 3px rgba(43,182,115,0.25); }
+
+        .tb-selected-tag {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            background: rgba(43,182,115,0.08);
+            border: 1px solid rgba(43,182,115,0.25);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #2BB673;
+            white-space: nowrap;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tb-selected-tag.show { display: flex; }
+
+        /* ── Main Results ── */
         .main {
-            padding: 24px;
+            padding: 20px 24px 40px;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            min-height: 100vh;
+            flex: 1;
         }
 
-        /* Status Card */
-        .status-card {
-            background: #fff; border: 1px solid #e5e7eb;
-            border-radius: 12px; padding: 16px;
-        }
-        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .status-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 18px; }
         .status-text { font-size: 14px; color: #6b7280; }
         .status-text.running { color: #f59e0b; }
         .status-text.done { color: #2BB673; }
         .status-text.error { color: #ef4444; }
+        .progress-bar { height: 4px; background: #f3f4f6; border-radius: 2px; overflow: hidden; margin-top: 10px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #2BB673, #3b82f6); border-radius: 2px; transition: width 0.3s; width: 0%; }
 
-        .progress-bar { height: 5px; background: #f3f4f6; border-radius: 3px; overflow: hidden; }
-        .progress-fill {
-            height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            border-radius: 3px; transition: width 0.3s; width: 0%;
-        }
-
-        /* Stats Row */
         .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .stat-card {
-            background: #fff; border: 1px solid #e5e7eb;
-            border-radius: 12px; padding: 16px; text-align: center;
-        }
+        .stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; text-align: center; }
         .stat-value { font-size: 28px; font-weight: 800; color: #111827; }
         .stat-label { font-size: 11px; color: #9ca3af; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.04em; }
 
-        /* Results Table */
-        .results-card {
-            background: #fff; border: 1px solid #e5e7eb;
-            border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
-        }
-        .results-header {
-            padding: 14px 18px; border-bottom: 1px solid #f3f4f6;
-            display: flex; justify-content: space-between; align-items: center;
-        }
+        .results-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+        .results-header { padding: 12px 18px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; }
         .results-header h3 { font-size: 14px; font-weight: 700; color: #111827; }
         .results-table-wrap { overflow-y: auto; flex: 1; }
         table { width: 100%; border-collapse: collapse; }
-        th {
-            position: sticky; top: 0; background: #f9fafb;
-            padding: 10px 14px; text-align: left;
-            font-size: 11px; text-transform: uppercase; color: #9ca3af;
-            border-bottom: 1px solid #e5e7eb; letter-spacing: 0.04em;
-        }
+        th { position: sticky; top: 0; background: #f9fafb; padding: 9px 14px; text-align: left; font-size: 11px; text-transform: uppercase; color: #9ca3af; border-bottom: 1px solid #e5e7eb; letter-spacing: 0.04em; }
         td { padding: 9px 14px; font-size: 13px; border-bottom: 1px solid #f9fafb; color: #374151; }
-        tr:hover td { background: rgba(59,130,246,0.03); }
+        tr:hover td { background: rgba(43,182,115,0.03); }
 
-        /* Log Panel */
-        .log-panel {
-            background: #f9fafb; border: 1px solid #e5e7eb;
-            border-radius: 12px; padding: 14px;
-            max-height: 180px; overflow-y: auto;
-            font-family: 'SF Mono', Monaco, monospace; font-size: 12px;
-        }
+        .log-panel { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; max-height: 160px; overflow-y: auto; font-family: 'SF Mono', Monaco, monospace; font-size: 12px; }
         .log-line { padding: 2px 0; color: #9ca3af; }
         .log-line.found { color: #2BB673; }
         .log-line.error { color: #ef4444; }
-        .log-line.skip { color: #f59e0b; }
+        .log-line.skip  { color: #f59e0b; }
 
         @keyframes fadeIn { from { opacity: 0; background: rgba(43,182,115,0.06); } to { opacity: 1; background: transparent; } }
-
-        /* Scan button glow for start/pause */
-        #scanBtn.active-glow, #pauseBtn.active-glow {
-            box-shadow: 0 0 0 2px #2BB673;
-        }
     </style>
 </head>
 <body>
 
 {% include 'header.html' %}
 
-<div class="scanner-wrap">
+<div class="scanner-page">
 
-    <!-- Sector Panel -->
-    <div class="sector-panel">
-        <div class="sector-panel-head">
-            <h2 data-i18n="sector-label">Sektör Seçin</h2>
-        </div>
-        <div class="sector-groups" id="sectorGroups">
-            {% for group_name, sector_list in sectors.items() %}
-            <div class="sg-group" id="sgg-{{ loop.index }}">
-                <button class="sg-title" onclick="toggleSgGroup('sgg-{{ loop.index }}')">
-                    <span class="sg-icon">{{ sector_icons.get(group_name, '')|safe }}</span>
-                    <span class="sg-label">{{ group_name }}</span>
-                    <svg class="sg-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-                <div class="sg-list">
-                    {% for sector in sector_list %}
-                    <div class="sg-item" onclick="selectSector(this, '{{ sector }}')">{{ sector }}</div>
-                    {% endfor %}
-                </div>
-            </div>
+    <!-- Top Toolbar -->
+    <div class="scan-toolbar">
+        <span class="tb-label">Sektör</span>
+        <select class="tb-select" id="categorySelect" onchange="onCategoryChange()">
+            <option value="">Ana kategori seçin...</option>
+            {% for group_name in sectors.keys() %}
+            <option value="{{ group_name }}">{{ group_name }}</option>
             {% endfor %}
-        </div>
+        </select>
 
-        <div class="scan-controls">
-            <div class="sc-selected" id="selectedInfo"></div>
-            <span class="sc-label" data-i18n="city-label">Şehir</span>
-            <select class="sc-select" id="citySelect">
-                <option value="" data-i18n="city-ph">Şehir seçin...</option>
-                {% for city in cities %}
-                <option value="{{ city }}">{{ city }}</option>
-                {% endfor %}
-            </select>
-            <span class="sc-label" data-i18n="min-res-label">Min. Sonuç</span>
-            <input class="sc-input" type="number" id="minResults" value="20" min="5" max="100">
-            <div class="scan-btns">
-                <button class="scan-btn start" id="scanBtn" onclick="startScan()" data-i18n="start-btn">Başlat</button>
-                <button class="scan-btn pause" id="pauseBtn" onclick="pauseScan()" disabled data-i18n="pause-btn">Duraklat</button>
-                <button class="scan-btn stop"  id="stopBtn"  onclick="stopScan()"  disabled data-i18n="stop-btn">Durdur</button>
-            </div>
-        </div>
+        <select class="tb-select" id="subSectorSelect" disabled onchange="onSubSectorChange()">
+            <option value="">Alt sektör seçin...</option>
+        </select>
+
+        <span class="tb-selected-tag" id="selectedTag">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="selectedTagText"></span>
+        </span>
+
+        <div class="tb-sep"></div>
+
+        <span class="tb-label">Şehir</span>
+        <select class="tb-select" id="citySelect" style="min-width:140px;">
+            <option value="">Şehir seçin...</option>
+            {% for city in cities %}
+            <option value="{{ city }}">{{ city }}</option>
+            {% endfor %}
+        </select>
+
+        <div class="tb-sep"></div>
+
+        <span class="tb-label">Min.</span>
+        <input class="tb-input" type="number" id="minResults" value="20" min="5" max="100">
+
+        <div class="tb-sep"></div>
+
+        <button class="tb-btn start" id="scanBtn" onclick="startScan()" data-i18n="start-btn">Başlat</button>
+        <button class="tb-btn pause" id="pauseBtn" onclick="pauseScan()" disabled data-i18n="pause-btn">Duraklat</button>
+        <button class="tb-btn stop"  id="stopBtn"  onclick="stopScan()"  disabled data-i18n="stop-btn">Durdur</button>
     </div>
 
     <!-- Results -->
     <div class="main">
 
         <div class="status-card">
-            <div class="status-header">
-                <span class="status-text" id="statusText" data-i18n="ready-status">Hazır — Sektör ve şehir seçerek başlayın</span>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
+            <span class="status-text" id="statusText" data-i18n="ready-status">Hazır — Yukarıdan sektör ve şehir seçerek başlayın</span>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         </div>
 
         <div class="stats-row">
@@ -274,10 +228,10 @@
         <div class="results-card">
             <div class="results-header">
                 <h3 data-i18n="found-biz">Bulunan İşletmeler</h3>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span id="resultCount" style="color:#9ca3af; font-size:13px;">0 <span data-i18n="results-sfx">sonuç</span></span>
-                    <button onclick="deleteSelectedResults()" id="deleteResultsBtn" style="display:none; padding:4px 10px; background:#ef4444; color:white; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;" data-i18n="del-sel">Seçilenleri Sil</button>
-                    <button onclick="clearResults()" id="clearResultsBtn" style="display:none; padding:4px 10px; background:#f3f4f6; color:#6b7280; border:none; border-radius:6px; font-size:12px; cursor:pointer;" data-i18n="clear-btn">Temizle</button>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span id="resultCount" style="color:#9ca3af;font-size:13px;">0 <span data-i18n="results-sfx">sonuç</span></span>
+                    <button onclick="deleteSelectedResults()" id="deleteResultsBtn" style="display:none;padding:4px 10px;background:#ef4444;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Seçilenleri Sil</button>
+                    <button onclick="clearResults()" id="clearResultsBtn" style="display:none;padding:4px 10px;background:#f3f4f6;color:#6b7280;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Temizle</button>
                 </div>
             </div>
             <div class="results-table-wrap">
@@ -298,33 +252,64 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr><td colspan="11" style="text-align:center; padding:40px; color:#9ca3af;" data-i18n="no-scans">Henüz tarama yapılmadı</td></tr>
+                        <tr><td colspan="11" style="text-align:center;padding:40px;color:#9ca3af;" data-i18n="no-scans">Henüz tarama yapılmadı</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
         <div class="log-panel" id="logPanel">
-            <div class="log-line" data-i18n="sys-log">Sistem hazır. Sol panelden sektör ve şehir seçin.</div>
+            <div class="log-line" data-i18n="sys-log">Sistem hazır. Yukarıdan sektör ve şehir seçin.</div>
         </div>
 
     </div>
 </div>
 
 <script>
+// Sectors data from server
+const SECTORS_DATA = {{ sectors | tojson }};
+
 let selectedSector = '';
 let pollInterval = null;
 
-function toggleSgGroup(id) {
-    document.getElementById(id).classList.toggle('open');
+function onCategoryChange() {
+    const cat = document.getElementById('categorySelect').value;
+    const sub = document.getElementById('subSectorSelect');
+    const tag = document.getElementById('selectedTag');
+    const catSel = document.getElementById('categorySelect');
+
+    // Reset sub-sector
+    sub.innerHTML = '<option value="">Alt sektör seçin...</option>';
+    selectedSector = '';
+    tag.classList.remove('show');
+    catSel.classList.toggle('filled', !!cat);
+
+    if (cat && SECTORS_DATA[cat]) {
+        SECTORS_DATA[cat].forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            sub.appendChild(opt);
+        });
+        sub.disabled = false;
+    } else {
+        sub.disabled = true;
+        sub.classList.remove('filled');
+    }
 }
 
-function selectSector(el, sector) {
-    document.querySelectorAll('.sg-item').forEach(i => i.classList.remove('selected'));
-    el.classList.add('selected');
-    selectedSector = sector;
-    const info = document.getElementById('selectedInfo');
-    if (info) info.textContent = t('selected-pfx', 'Seçilen: ') + sector;
+function onSubSectorChange() {
+    const val = document.getElementById('subSectorSelect').value;
+    const tag = document.getElementById('selectedTag');
+    const subSel = document.getElementById('subSectorSelect');
+    selectedSector = val;
+    subSel.classList.toggle('filled', !!val);
+    if (val) {
+        tag.classList.add('show');
+        document.getElementById('selectedTagText').textContent = val;
+    } else {
+        tag.classList.remove('show');
+    }
 }
 
 function showScanControls(running, paused) {
@@ -339,12 +324,8 @@ function showScanControls(running, paused) {
         scanBtn.classList.add('active-glow');
         pauseBtn.disabled = false;
         stopBtn.disabled = false;
-        if (paused) {
-            pauseBtn.textContent = 'Devam Et';
-            pauseBtn.classList.add('active-glow');
-        } else {
-            pauseBtn.textContent = 'Duraklat';
-        }
+        pauseBtn.textContent = paused ? 'Devam Et' : 'Duraklat';
+        if (paused) pauseBtn.classList.add('active-glow');
     } else {
         scanBtn.disabled = false;
         scanBtn.textContent = 'Başlat';
@@ -358,11 +339,11 @@ function pauseScan() {
     const pauseBtn = document.getElementById('pauseBtn');
     const isPaused = pauseBtn.textContent.trim() === 'Devam Et';
     if (isPaused) {
-        fetch('/api/scan/resume', {method: 'POST'});
+        fetch('/api/scan/resume', {method:'POST'});
         pauseBtn.textContent = 'Duraklat';
         pauseBtn.classList.remove('active-glow');
     } else {
-        fetch('/api/scan/pause', {method: 'POST'});
+        fetch('/api/scan/pause', {method:'POST'});
         pauseBtn.textContent = 'Devam Et';
         pauseBtn.classList.add('active-glow');
     }
@@ -370,16 +351,16 @@ function pauseScan() {
 
 function stopScan() {
     if (!confirm(t('scan-stop-confirm','Tarama durdurulacak. Emin misiniz?'))) return;
-    fetch('/api/scan/stop', {method: 'POST'}).then(() => {
+    fetch('/api/scan/stop', {method:'POST'}).then(() => {
         showScanControls(false, false);
-        const stopBtn = document.getElementById('stopBtn');
-        if (stopBtn) { stopBtn.classList.add('active-glow'); setTimeout(() => stopBtn.classList.remove('active-glow'), 2000); }
+        const s = document.getElementById('stopBtn');
+        if (s) { s.classList.add('active-glow'); setTimeout(() => s.classList.remove('active-glow'), 2000); }
     });
 }
 
 fetch('/api/status').then(r => r.json()).then(data => {
     if (data.running) { showScanControls(true, data.paused || false); startPolling(); }
-    else { fetch('/api/reset', {method: 'POST'}); }
+    else { fetch('/api/reset', {method:'POST'}); }
 });
 
 function startScan() {
@@ -394,13 +375,13 @@ function startScan() {
     document.getElementById('statTotal').textContent = '0';
     document.getElementById('statFound').textContent = '0';
     document.getElementById('statSheets').textContent = '0';
-    document.getElementById('resultsBody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:#9ca3af;">${t('scanning-msg','Taranıyor...')}</td></tr>`;
-    document.getElementById('resultCount').textContent = `0 ${t('results-sfx','sonuç')}`;
+    document.getElementById('resultsBody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:#9ca3af;">Taranıyor...</td></tr>`;
+    document.getElementById('resultCount').textContent = '0 sonuç';
     document.getElementById('logPanel').innerHTML = '';
     fetch('/api/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sector: selectedSector, city: city, min_results: parseInt(minResults) })
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({sector: selectedSector, city, min_results: parseInt(minResults)})
     }).then(r => r.json()).then(data => {
         if (data.error) { alert(data.error); showScanControls(false, false); return; }
         showScanControls(true, false);
@@ -435,16 +416,16 @@ function fetchStatus() {
                 tr.style.animation = 'fadeIn 0.3s ease';
                 tr.innerHTML = `
                     <td><input type="checkbox" class="result-check" value="${i}" onchange="updateResultActions()"></td>
-                    <td>${i + 1}</td>
-                    <td>${r.date || '-'}</td>
-                    <td>${r.sector || '-'}</td>
+                    <td>${i+1}</td>
+                    <td>${r.date||'-'}</td>
+                    <td>${r.sector||'-'}</td>
                     <td>${r.name}</td>
-                    <td>${r.phone || '-'}</td>
+                    <td>${r.phone||'-'}</td>
                     <td>${r.email}</td>
-                    <td>${r.domain ? '<a href="https://' + r.domain + '" target="_blank" style="color:#3b82f6">' + r.domain + '</a>' : '-'}</td>
-                    <td>${r.instagram ? '<a href="' + r.instagram + '" target="_blank" style="color:#e1306c">IG</a>' : '-'}</td>
-                    <td>${r.facebook ? '<a href="' + r.facebook + '" target="_blank" style="color:#1877f2">FB</a>' : '-'}</td>
-                    <td>${r.linkedin ? '<a href="' + r.linkedin + '" target="_blank" style="color:#0077b5">LI</a>' : '-'}</td>
+                    <td>${r.domain?'<a href="https://'+r.domain+'" target="_blank" style="color:#3b82f6">'+r.domain+'</a>':'-'}</td>
+                    <td>${r.instagram?'<a href="'+r.instagram+'" target="_blank" style="color:#e1306c">IG</a>':'-'}</td>
+                    <td>${r.facebook?'<a href="'+r.facebook+'" target="_blank" style="color:#1877f2">FB</a>':'-'}</td>
+                    <td>${r.linkedin?'<a href="'+r.linkedin+'" target="_blank" style="color:#0077b5">LI</a>':'-'}</td>
                 `;
                 tbody.appendChild(tr);
             }
@@ -467,39 +448,33 @@ function toggleAllResults(el) {
     document.querySelectorAll('.result-check').forEach(cb => cb.checked = el.checked);
     updateResultActions();
 }
-
 function updateResultActions() {
     const checked = document.querySelectorAll('.result-check:checked').length;
     const btn = document.getElementById('deleteResultsBtn');
-    if (checked > 0) { btn.style.display = 'inline-block'; btn.textContent = `${t('del-sel-btn','Seçilenleri Sil')} (${checked})`; }
-    else { btn.style.display = 'none'; }
+    if (checked > 0) { btn.style.display='inline-block'; btn.textContent=`Seçilenleri Sil (${checked})`; }
+    else btn.style.display = 'none';
 }
-
 function deleteSelectedResults() {
     const indices = Array.from(document.querySelectorAll('.result-check:checked')).map(cb => parseInt(cb.value));
     if (!indices.length) return;
-    if (!confirm(`${indices.length} ${t('scan-delete-confirm','kayıt Scanner sonuçlarından ve Google Sheets\'ten silinecek. Emin misiniz?')}`)) return;
-    fetch('/api/scan/delete', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ indices: indices })
-    }).then(r => r.json()).then(data => {
-        if (data.error) { alert(data.error); return; }
+    if (!confirm(`${indices.length} kayıt silinecek. Emin misiniz?`)) return;
+    fetch('/api/scan/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({indices})})
+    .then(r=>r.json()).then(data=>{
+        if(data.error){alert(data.error);return;}
         alert(data.message);
         document.getElementById('checkAllResults').checked = false;
         updateResultActions();
         fetchStatus();
     });
 }
-
 function clearResults() {
-    if (!confirm(t('scan-clear-confirm','Tüm tarama sonuçları ekrandan temizlenecek. Emin misiniz?'))) return;
-    fetch('/api/reset', {method: 'POST'}).then(() => {
-        document.getElementById('resultsBody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:#9ca3af;">${t('no-scans','Henüz tarama yapılmadı')}</td></tr>`;
-        document.getElementById('statTotal').textContent = '0';
-        document.getElementById('statFound').textContent = '0';
-        document.getElementById('statSheets').textContent = '0';
-        document.getElementById('resultCount').textContent = `0 ${t('results-sfx','sonuç')}`;
-        document.getElementById('statusText').textContent = t('ready-status','Hazır — sol panelden sektör ve şehir seçin');
+    if (!confirm('Tüm tarama sonuçları ekrandan temizlenecek. Emin misiniz?')) return;
+    fetch('/api/reset',{method:'POST'}).then(()=>{
+        document.getElementById('resultsBody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:#9ca3af;">Henüz tarama yapılmadı</td></tr>`;
+        ['statTotal','statFound','statSheets'].forEach(id=>document.getElementById(id).textContent='0');
+        document.getElementById('resultCount').textContent = '0 sonuç';
+        document.getElementById('statusText').textContent = 'Hazır — Yukarıdan sektör ve şehir seçin';
+        document.getElementById('statusText').className = 'status-text';
         document.getElementById('progressFill').style.width = '0%';
         document.getElementById('logPanel').innerHTML = '';
         document.getElementById('clearResultsBtn').style.display = 'none';
