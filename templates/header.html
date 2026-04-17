@@ -165,16 +165,53 @@
                 <p class="hud-name">{{ current_user.full_name }}</p>
                 <p class="hud-email">{{ current_user.email }}</p>
             </div>
+            <div style="padding:4px 0;">
+                <a href="/account" class="hud-item">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Hesabım
+                </a>
+                <a href="#" class="hud-item">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Faturalarım
+                </a>
+                <a href="#" class="hud-item">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    Abonelik
+                </a>
+                <a href="#" class="hud-item">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Yardım Merkezi
+                </a>
+            </div>
             <div class="hud-divider"></div>
-            <a href="/account" class="hud-item">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                Hesabım
-            </a>
+            <div style="padding:4px 0;">
+                <button class="hud-item" style="width:100%;background:none;border:none;cursor:pointer;justify-content:space-between;" onclick="toggleHudLang(event)">
+                    <span style="display:flex;align-items:center;gap:12px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+                        Dil
+                    </span>
+                    <svg id="hudLangChev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <div id="hudLangSub" style="display:none;padding:4px 0 4px 40px;">
+                    <button onclick="setAppLang('tr');document.getElementById('hudLangSub').style.display='none';"
+                        style="width:100%;display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:13px;color:#d1d5db;background:none;border:none;cursor:pointer;font-family:inherit;transition:background 0.15s;border-radius:0;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
+                        Türkçe
+                    </button>
+                    <button onclick="setAppLang('en');document.getElementById('hudLangSub').style.display='none';"
+                        style="width:100%;display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:13px;color:#d1d5db;background:none;border:none;cursor:pointer;font-family:inherit;transition:background 0.15s;border-radius:0;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">
+                        English
+                    </button>
+                </div>
+            </div>
             <div class="hud-divider"></div>
-            <a href="/logout" class="hud-item hud-logout">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Çıkış Yap
-            </a>
+            <div style="padding:4px 0;">
+                <a href="/logout" class="hud-item hud-logout">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Çıkış Yap
+                </a>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -198,29 +235,41 @@
 }
 .hdr-user-drop {
     display: none; position: absolute; top: calc(100% + 8px); right: 0;
-    background: #111827; border: 1px solid #1e293b;
-    border-radius: 14px; padding: 8px; min-width: 220px;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.5); z-index: 1000;
+    background: linear-gradient(to bottom, #111827, #1f2937);
+    border: 1px solid #374151;
+    border-radius: 12px; padding: 4px 0; min-width: 224px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6); z-index: 1000;
 }
 .hdr-user-wrap.open .hdr-user-drop { display: block; }
-.hud-info { padding: 8px 12px 12px; }
-.hud-name { font-size: 13px; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hud-email { font-size: 12px; color: #64748b; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hud-divider { height: 1px; background: #1e293b; margin: 2px 0; }
+.hud-info { padding: 10px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.hud-name { font-size: 12px; font-weight: 600; color: #f3f4f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-email { font-size: 11px; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0; }
 .hud-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 10px; border-radius: 8px; font-size: 13px;
-    font-weight: 500; color: #94a3b8; text-decoration: none;
-    transition: background 0.15s, color 0.15s;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; font-size: 13px;
+    color: #e5e7eb; text-decoration: none;
+    transition: background 0.15s;
 }
-.hud-item:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
-.hud-logout:hover { background: rgba(239,68,68,0.08); color: #f87171; }
+.hud-item:hover { background: rgba(255,255,255,0.08); }
+.hud-item svg { color: #9ca3af; flex-shrink: 0; }
+.hud-logout { color: #f87171; }
+.hud-logout:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+.hud-logout svg { color: #f87171; }
 </style>
 
 <script>
 function toggleHdrUser(e) {
     e.stopPropagation();
     document.getElementById('hdrUserWrap').classList.toggle('open');
+}
+function toggleHudLang(e) {
+    e.stopPropagation();
+    const sub  = document.getElementById('hudLangSub');
+    const chev = document.getElementById('hudLangChev');
+    const open = sub.style.display === 'none';
+    sub.style.display  = open ? 'block' : 'none';
+    chev.style.transform = open ? 'rotate(90deg)' : '';
 }
 document.addEventListener('click', function(e) {
     const wrap = document.getElementById('hdrUserWrap');
