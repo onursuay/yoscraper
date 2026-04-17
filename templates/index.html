@@ -418,6 +418,66 @@
             display: none;
         }
         .selected-info.show { display: block; }
+
+        /* ── Sidebar bottom user widget ── */
+        #blUserWrap { display: none !important; } /* floating widget hidden on this page */
+
+        .sb-user-wrap {
+            position: sticky;
+            bottom: 0;
+            background: #1e293b;
+            margin: 0 -24px;
+            padding: 0 16px 12px;
+        }
+        .container.sidebar-closed .sb-user-wrap {
+            margin: 0 -12px;
+            padding: 0 6px 12px;
+        }
+        .sb-user-divider { height: 1px; background: #334155; margin-bottom: 10px; }
+        .sb-user-trigger {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+            padding: 8px 10px; background: rgba(255,255,255,0.04);
+            border: 1px solid #334155; border-radius: 10px;
+            cursor: pointer; transition: background 0.15s;
+            font-family: inherit;
+        }
+        .sb-user-trigger:hover { background: rgba(255,255,255,0.08); }
+        .sb-avatar {
+            width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+            background: #2BB673; display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: #fff;
+        }
+        .sb-info { text-align: left; flex: 1; min-width: 0; overflow: hidden; }
+        .sb-name { font-size: 13px; font-weight: 500; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sb-status { font-size: 11px; color: #2BB673; font-weight: 500; }
+
+        /* Collapsed: hide text, center avatar */
+        .container.sidebar-closed .sb-info { display: none; }
+        .container.sidebar-closed .sb-user-trigger { justify-content: center; padding: 8px; }
+
+        /* Dropdown */
+        .sb-dropdown {
+            display: none; position: absolute; bottom: calc(100% + 4px); left: 16px;
+            background: linear-gradient(to bottom, #111827, #1f2937);
+            border: 1px solid #374151; border-radius: 12px;
+            padding: 4px 0; width: 224px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6); z-index: 2000;
+        }
+        .container.sidebar-closed .sb-dropdown { left: 56px; bottom: 12px; }
+        .sb-user-wrap.open .sb-dropdown { display: block; }
+        .sbd-header { padding: 10px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sbd-name { font-size: 12px; font-weight: 600; color: #f3f4f6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sbd-email { font-size: 11px; color: #6b7280; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sbd-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0; }
+        .sbd-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+            font-size: 13px; color: #e5e7eb; text-decoration: none; transition: background 0.15s;
+        }
+        .sbd-item:hover { background: rgba(255,255,255,0.08); }
+        .sbd-item svg { color: #9ca3af; flex-shrink: 0; }
+        .sbd-logout { color: #f87171; }
+        .sbd-logout:hover { background: rgba(239,68,68,0.15); }
+        .sbd-logout svg { color: #f87171; }
     </style>
 </head>
 <body>
@@ -478,6 +538,69 @@
                 <button class="ctrl-btn" id="stopBtn" onclick="stopScan()" disabled data-i18n="stop-btn">Durdur</button>
             </div>
         </div>
+
+        {% if current_user %}
+        <!-- ── Sidebar bottom user profile ── -->
+        <div class="sb-user-wrap" id="sbUserWrap">
+            <div class="sb-user-divider"></div>
+            <button class="sb-user-trigger" onclick="toggleSbUser(event)">
+                <div class="sb-avatar">{{ current_user.initials }}</div>
+                <div class="sb-info">
+                    <div class="sb-name">{{ current_user.full_name }}</div>
+                    <div class="sb-status">Free</div>
+                </div>
+            </button>
+            <div class="sb-dropdown" id="sbDropdown">
+                <div class="sbd-header">
+                    <p class="sbd-name">{{ current_user.full_name }}</p>
+                    <p class="sbd-email">{{ current_user.email }}</p>
+                </div>
+                <div style="padding:4px 0;">
+                    <a href="/account" class="sbd-item">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Hesabım
+                    </a>
+                    <a href="/faturalarim" class="sbd-item">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Faturalarım
+                    </a>
+                    <a href="/abonelik" class="sbd-item">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                        Abonelik
+                    </a>
+                    <a href="/yardim" class="sbd-item">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Yardım Merkezi
+                    </a>
+                </div>
+                <div class="sbd-divider"></div>
+                <div style="padding:4px 0;">
+                    <button class="sbd-item" style="width:100%;background:none;border:none;cursor:pointer;justify-content:space-between;font-family:inherit;" onclick="toggleSbLang(event)">
+                        <span style="display:flex;align-items:center;gap:12px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+                            Dil
+                        </span>
+                        <svg id="sbLangChev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                    <div id="sbLangSub" style="display:none;padding:4px 0 4px 40px;">
+                        <button onclick="setAppLang('tr');document.getElementById('sbLangSub').style.display='none';"
+                            style="width:100%;text-align:left;padding:7px 16px;font-size:12px;color:#d1d5db;background:none;border:none;cursor:pointer;font-family:inherit;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">Türkçe</button>
+                        <button onclick="setAppLang('en');document.getElementById('sbLangSub').style.display='none';"
+                            style="width:100%;text-align:left;padding:7px 16px;font-size:12px;color:#d1d5db;background:none;border:none;cursor:pointer;font-family:inherit;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">English</button>
+                    </div>
+                </div>
+                <div class="sbd-divider"></div>
+                <div style="padding:4px 0;">
+                    <a href="/logout" class="sbd-item sbd-logout">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Çıkış Yap
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Main -->
@@ -837,5 +960,23 @@ function clearResults() {
 }
 </script>
 
+<script>
+function toggleSbUser(e) {
+    e.stopPropagation();
+    document.getElementById('sbUserWrap').classList.toggle('open');
+}
+function toggleSbLang(e) {
+    e.stopPropagation();
+    const sub  = document.getElementById('sbLangSub');
+    const chev = document.getElementById('sbLangChev');
+    const open = sub.style.display === 'none';
+    sub.style.display   = open ? 'block' : 'none';
+    chev.style.transform = open ? 'rotate(90deg)' : '';
+}
+document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('sbUserWrap');
+    if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
+});
+</script>
 </body>
 </html>
