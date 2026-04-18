@@ -819,24 +819,35 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
 </td>
 </tr>
 
-<!-- PAIN POINTS -->
+<!-- BODY -->
 <tr>
 <td style="padding:32px 40px 8px;color:#1f2937;font-size:15px;line-height:1.75;">
 
   <p style="margin:0 0 20px;">Sayın <strong>{firma_adi}</strong> Yetkilisi,</p>
 
-  <p style="margin:0 0 22px;">
-    <strong>{sehir}</strong>'de <strong>{sektor}</strong> sektöründe faaliyet gösteren birçok firmayla çalışırken en sık karşılaştığımız 3 kritik sorun var:
+  <p style="margin:0 0 20px;">
+    <strong>{sehir}</strong> bölgede <strong>{sektor}</strong> sektöründe faaliyet gösteren işletmeler için dijital görünürlük, bugün müşteri kazanımını doğrudan etkileyen en önemli etkenlerden biri haline gelmiştir.
   </p>
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+  <p style="margin:0 0 24px;">
+    Aynı sektörde faaliyet gösteren birçok firmayla çalışırken en sık karşılaştığımız ana sorunlar; Google aramalarında yeterince görünür olmamak, web sitesinin yetersiz kalması ve reklam çalışmalarının hiç yapılmaması ya da verimsiz yönetilmesidir.
+  </p>
+
+  <p style="margin:0 0 16px;">
+    <strong>YO Dijital</strong> olarak bu süreci sizin için 3 ana başlıkta uçtan uca yönetiyoruz:
+  </p>
+
+  <!-- 3 hizmet listesi — vurgulu kartlar -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 26px;">
     <tr>
       <td style="padding:0 0 10px;">
-        <table cellpadding="0" cellspacing="0" width="100%" style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:0 10px 10px 0;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
           <tr>
-            <td style="padding:14px 18px;">
-              <strong style="color:#991b1b;font-size:14px;">Google'da yeterince görünmemek</strong>
-              <p style="margin:4px 0 0;color:#7f1d1d;font-size:13px;line-height:1.5;">Potansiyel müşteriler sizi değil, rakibinizi buluyor.</p>
+            <td width="44" style="padding:14px 0 14px 16px;vertical-align:middle;">
+              <div style="width:32px;height:32px;border-radius:8px;background:#2BB673;color:#fff;font-weight:800;font-size:14px;text-align:center;line-height:32px;">1</div>
+            </td>
+            <td style="padding:14px 18px 14px 10px;color:#14532d;font-size:14px;font-weight:700;line-height:1.45;">
+              SEO, SGE, AEO ve GEO çalışmaları
             </td>
           </tr>
         </table>
@@ -844,11 +855,13 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     </tr>
     <tr>
       <td style="padding:0 0 10px;">
-        <table cellpadding="0" cellspacing="0" width="100%" style="background:#fff7ed;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;">
           <tr>
-            <td style="padding:14px 18px;">
-              <strong style="color:#92400e;font-size:14px;">Yetersiz web sitesi</strong>
-              <p style="margin:4px 0 0;color:#78350f;font-size:13px;line-height:1.5;">Ziyaretçiler sitede duruyor ama müşteriye dönüşmüyor.</p>
+            <td width="44" style="padding:14px 0 14px 16px;vertical-align:middle;">
+              <div style="width:32px;height:32px;border-radius:8px;background:#2563eb;color:#fff;font-weight:800;font-size:14px;text-align:center;line-height:32px;">2</div>
+            </td>
+            <td style="padding:14px 18px 14px 10px;color:#1e3a8a;font-size:14px;font-weight:700;line-height:1.45;">
+              Web sitesi tasarımı ve dönüşüm odaklı iyileştirmeler
             </td>
           </tr>
         </table>
@@ -856,11 +869,13 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     </tr>
     <tr>
       <td>
-        <table cellpadding="0" cellspacing="0" width="100%" style="background:#fdf4ff;border-left:4px solid #a855f7;border-radius:0 10px 10px 0;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;">
           <tr>
-            <td style="padding:14px 18px;">
-              <strong style="color:#6b21a8;font-size:14px;">Reklamların verimsiz yönetilmesi</strong>
-              <p style="margin:4px 0 0;color:#581c87;font-size:13px;line-height:1.5;">Her ay bütçe harcanıyor ama gerçek bir sonuç alınmıyor.</p>
+            <td width="44" style="padding:14px 0 14px 16px;vertical-align:middle;">
+              <div style="width:32px;height:32px;border-radius:8px;background:#ea580c;color:#fff;font-weight:800;font-size:14px;text-align:center;line-height:32px;">3</div>
+            </td>
+            <td style="padding:14px 18px 14px 10px;color:#7c2d12;font-size:14px;font-weight:700;line-height:1.45;">
+              Meta (Instagram/Facebook) ve Google reklam yönetimi
             </td>
           </tr>
         </table>
@@ -868,86 +883,45 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     </tr>
   </table>
 
-  <!-- SOLUTION -->
-  <p style="margin:0 0 14px;color:#111827;font-size:18px;font-weight:800;">
-    YO Dijital olarak sizin için uçtan uca yönetiyoruz:
+  <p style="margin:0 0 24px;">
+    Uygun görmeniz halinde, <strong>{firma_adi}</strong> için 15 dakikalık kısa bir ön görüşmede mevcut durumunuzu ve geliştirilmesi gereken alanları birlikte değerlendirebiliriz.
   </p>
-
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
-    <tr>
-      <td width="33.33%" valign="top" style="padding:0 4px 8px 0;">
-        <table cellpadding="0" cellspacing="0" width="100%" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;">
-          <tr>
-            <td style="padding:16px 14px;text-align:center;">
-              <div style="font-size:24px;margin-bottom:6px;">🎯</div>
-              <strong style="color:#166534;font-size:13px;display:block;line-height:1.3;">SEO · SGE · AEO · GEO</strong>
-              <span style="color:#166534;font-size:11px;display:block;margin-top:4px;opacity:0.8;">Aramalarda ilk sırada</span>
-            </td>
-          </tr>
-        </table>
-      </td>
-      <td width="33.33%" valign="top" style="padding:0 4px 8px 4px;">
-        <table cellpadding="0" cellspacing="0" width="100%" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;">
-          <tr>
-            <td style="padding:16px 14px;text-align:center;">
-              <div style="font-size:24px;margin-bottom:6px;">💻</div>
-              <strong style="color:#1e40af;font-size:13px;display:block;line-height:1.3;">Web Sitesi &amp; Dönüşüm</strong>
-              <span style="color:#1e40af;font-size:11px;display:block;margin-top:4px;opacity:0.8;">Ziyaretçi → müşteri</span>
-            </td>
-          </tr>
-        </table>
-      </td>
-      <td width="33.33%" valign="top" style="padding:0 0 8px 4px;">
-        <table cellpadding="0" cellspacing="0" width="100%" style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;">
-          <tr>
-            <td style="padding:16px 14px;text-align:center;">
-              <div style="font-size:24px;margin-bottom:6px;">📣</div>
-              <strong style="color:#854d0e;font-size:13px;display:block;line-height:1.3;">Meta &amp; Google Reklam</strong>
-              <span style="color:#854d0e;font-size:11px;display:block;margin-top:4px;opacity:0.8;">Verimli bütçe yönetimi</span>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
 
   <!-- CTA BANNER -->
   <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:linear-gradient(135deg,#0f3d2e 0%,#2BB673 100%);border-radius:14px;">
     <tr>
-      <td style="padding:26px 28px;text-align:center;">
-        <p style="margin:0 0 6px;color:#ffffff;font-size:13px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;opacity:0.85;">15 DAKİKALIK ÜCRETSİZ GÖRÜŞME</p>
-        <p style="margin:0 0 18px;color:#ffffff;font-size:19px;font-weight:800;line-height:1.4;">
-          {firma_adi} için büyüme planını birlikte çıkaralım.
+      <td style="padding:22px 26px;text-align:center;">
+        <p style="margin:0 0 14px;color:#ffffff;font-size:15px;font-weight:700;line-height:1.5;">
+          15 dakikalık ücretsiz ön görüşme için
         </p>
         <a href="https://cal.com/onursuay/15min"
-           style="display:inline-block;background:#ffffff;color:#0f3d2e;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:800;padding:13px 30px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.15);">
+           style="display:inline-block;background:#ffffff;color:#0f3d2e;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:800;padding:12px 28px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.15);">
           Randevu Oluştur →
         </a>
       </td>
     </tr>
   </table>
 
-  <!-- CONTACT CARD -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 6px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;">
+  <!-- İLETİŞİM -->
+  <p style="margin:0 0 12px;color:#111827;font-size:15px;font-weight:800;">İletişim:</p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 6px;">
     <tr>
-      <td style="padding:16px 20px;">
-        <p style="margin:0 0 10px;font-weight:800;color:#111827;font-size:13px;letter-spacing:0.3px;text-transform:uppercase;">Direkt İletişim</p>
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td width="33.33%" style="font-size:13px;color:#374151;padding:2px 0;">
-              <span style="color:#6b7280;font-size:11px;display:block;">WhatsApp</span>
-              <a href="https://wa.me/905345763361" style="color:#16a34a;text-decoration:none;font-weight:700;">0534 576 33 61</a>
-            </td>
-            <td width="33.33%" style="font-size:13px;color:#374151;padding:2px 0;">
-              <span style="color:#6b7280;font-size:11px;display:block;">E-posta</span>
-              <a href="mailto:info@yodijital.com" style="color:#2563eb;text-decoration:none;font-weight:700;">info@yodijital.com</a>
-            </td>
-            <td width="33.33%" style="font-size:13px;color:#374151;padding:2px 0;">
-              <span style="color:#6b7280;font-size:11px;display:block;">Randevu</span>
-              <a href="https://cal.com/onursuay/15min" style="color:#2563eb;text-decoration:none;font-weight:700;">cal.com/onursuay/15min</a>
-            </td>
-          </tr>
-        </table>
+      <td style="padding:6px 0;font-size:14px;color:#374151;">
+        <strong>WhatsApp:</strong>
+        <a href="https://wa.me/905345763361" style="color:#16a34a;text-decoration:none;font-weight:700;">0534 576 33 61</a>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0;font-size:14px;color:#374151;">
+        <strong>E-posta:</strong>
+        <a href="mailto:info@yodijital.com" style="color:#2563eb;text-decoration:none;font-weight:700;">info@yodijital.com</a>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0;font-size:14px;color:#374151;">
+        <strong>Randevu:</strong>
+        <a href="https://cal.com/onursuay/15min" style="color:#2563eb;text-decoration:none;font-weight:700;">cal.com/onursuay/15min</a>
       </td>
     </tr>
   </table>
