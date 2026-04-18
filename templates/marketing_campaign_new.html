@@ -931,13 +931,15 @@ function initStep3() {
             '<code>{firma_adi}</code> <code>{ad}</code> <code>{soyad}</code> <code>{sehir}</code> <code>{email}</code>';
     }
 
-    // Auto-fill body and subject on first enter (don't overwrite if user already typed)
+    // Subject: fill with default every time user enters step 3 if still empty
+    const subjEl = document.getElementById('f-subject');
+    if (!subjEl.value.trim() && src === 'scanner') {
+        subjEl.value = DEFAULT_SUBJECT_REST;
+    }
+
+    // Body: auto-fill on first enter only (don't overwrite if user already typed)
     if (!step3Initialized) {
         document.getElementById('f-body').value = DEFAULT_HTML_TEMPLATE;
-        const subjEl = document.getElementById('f-subject');
-        if (!subjEl.value.trim() && src === 'scanner') {
-            subjEl.value = DEFAULT_SUBJECT_REST;
-        }
         step3Initialized = true;
     }
 }
