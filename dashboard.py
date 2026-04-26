@@ -1666,10 +1666,7 @@ GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_API_KEY       = os.getenv("GOOGLE_API_KEY", "")   # public API key for Picker widget
 GOOGLE_APP_ID        = os.getenv("GOOGLE_APP_ID", "")    # GCP project number for Picker app context
-GOOGLE_SCOPES = " ".join([
-    "https://www.googleapis.com/auth/spreadsheets.readonly",
-    "https://www.googleapis.com/auth/drive.file",
-])
+GOOGLE_SCOPES = "https://www.googleapis.com/auth/drive.file"
 GOOGLE_TOKEN_COOKIE = "google_sheets_token"
 
 
