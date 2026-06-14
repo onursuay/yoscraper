@@ -78,6 +78,31 @@ BLOCKED_DOMAIN_KEYWORDS = [
     "avm", "mall", "shoppingcenter",
 ]
 
+# Engellenen WEB SITESI domainleri (aggregator / pazar yeri / sosyal medya).
+# Google Places "website" alaninda isletmenin kendi sitesi yerine bunlari donebiliyor.
+# Bunlar gercek isletme sitesi degildir; e-posta cikarilamaz, info@... tahmini de copyemdir.
+BLOCKED_WEBSITE_DOMAINS = {
+    # Emlak / ilan pazaryerleri
+    "sahibinden.com", "hepsiemlak.com", "emlakjet.com", "zingat.com",
+    "hurriyetemlak.com", "emlakkulisi.com",
+    # Sosyal medya
+    "instagram.com", "facebook.com", "fb.com", "twitter.com", "x.com",
+    "linkedin.com", "youtube.com", "youtu.be", "tiktok.com", "pinterest.com",
+    # Mesajlasma / link toplayicilar
+    "wa.me", "whatsapp.com", "api.whatsapp.com", "t.me", "telegram.me",
+    "linktr.ee", "beacons.ai", "bio.link",
+    # Google barindirma / kisaltma
+    "google.com", "goo.gl", "business.site", "sites.google.com", "blogspot.com",
+    # Rehber / yorum siteleri
+    "yelp.com", "foursquare.com", "tripadvisor.com", "tripadvisor.com.tr",
+    "sikayetvar.com", "armut.com", "bionluk.com",
+    # E-ticaret pazaryerleri
+    "n11.com", "gittigidiyor.com", "trendyol.com", "hepsiburada.com",
+    "amazon.com.tr", "ciceksepeti.com",
+    # Yemek
+    "yemeksepeti.com", "getir.com", "migros.com.tr",
+}
+
 # Atlanacak e-posta onekleri
 BLOCKED_EMAIL_PREFIXES = [
     "noreply", "no-reply", "no_reply",
@@ -85,15 +110,15 @@ BLOCKED_EMAIL_PREFIXES = [
     "abuse", "spam",
 ]
 
-# Website'de kontrol edilecek sayfalar (e-posta bulmak icin)
+# Website'de kontrol edilecek sayfalar (e-posta bulmak icin).
+# Not: Asil kesif sayfadaki gercek "Iletisim" linkini takip ederek yapilir
+# (bkz. EmailExtractor._discover_contact_pages). Bu liste yedek/fallback'tir.
 CONTACT_PAGES = [
-    "/iletisim",
-    "/contact",
-    "/contact-us",
-    "/bize-ulasin",
-    "/hakkimizda",
-    "/about",
-    "/about-us",
+    "/iletisim", "/iletisim.html", "/iletisim.php", "/iletisim/",
+    "/iletisim-bilgileri", "/bize-ulasin", "/bize-ulasin.html",
+    "/contact", "/contact.html", "/contact.php", "/contact-us", "/contact/",
+    "/hakkimizda", "/hakkimizda.html", "/about", "/about-us",
+    "/kurumsal", "/iletisim-2",
 ]
 
 # Admin
@@ -114,4 +139,6 @@ USER_AGENTS = [
 ]
 
 # Sütun basliklari
-SHEET_COLUMNS = ["Tarih", "Sektör", "Firma Adı", "Telefon", "E-posta", "Domain", "Web Sitesi", "Instagram", "Facebook", "LinkedIn"]
+# Not: "Tip" SONA eklendi (kurumsal/kisisel/tahmin). Domain hala F sutununda kalmali
+# (sheets_manager._load_existing_domains F sutununu okuyor) - sira degistirilmemeli.
+SHEET_COLUMNS = ["Tarih", "Sektör", "Firma Adı", "Telefon", "E-posta", "Domain", "Web Sitesi", "Instagram", "Facebook", "LinkedIn", "Tip"]

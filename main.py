@@ -17,7 +17,7 @@ from scraper.maps_scraper import BusinessScraper
 from scraper.email_extractor import EmailExtractor
 from sheets.sheets_manager import SheetsManager
 from mailer.sender import EmailSender
-from utils.filters import is_valid_corporate_email, extract_domain_from_url
+from utils.filters import is_valid_corporate_email, extract_domain_from_url, is_aggregator_website
 from utils.domain_parser import domain_to_business_name
 from config import MIN_RESULTS
 
@@ -127,6 +127,11 @@ def run_scraper(sector: str, city: str, min_results: int, send_mail: bool, headl
         if not website:
             continue
 
+        # Aggregator/sosyal medya sitelerini atla (sahibinden, instagram vb.)
+        if is_aggregator_website(website):
+            logger.info(f"  [{i}] Aggregator/sosyal site atlandı: {website}")
+            continue
+
         # Domain cikar
         domain = extract_domain_from_url(website)
 
@@ -138,11 +143,11 @@ def run_scraper(sector: str, city: str, min_results: int, send_mail: bool, headl
 
         logger.info(f"  [{i}] E-posta aranıyor: {domain}...")
 
-        # E-postalari cikar
-        emails = extractor.extract_emails_from_url(website)
+        # E-postayi ve tipini cikar (kurumsal > kisisel > tahmin)
+        contact = extractor.extract_contact_email(website)
 
-        if not emails:
-            logger.info(f"       Kurumsal e-posta bulunamadi.")
+        if not contact["email"]:
+            logger.info(f"       E-posta bulunamadi.")
             skipped_no_email += 1
             continue
 
@@ -150,17 +155,17 @@ def run_scraper(sector: str, city: str, min_results: int, send_mail: bool, headl
         maps_name = biz.get("maps_name", "").strip()
         business_name = maps_name if maps_name else domain_to_business_name(website)
 
-        # Ilk gecerli e-postayi kullan
-        email = emails[0]
+        email = contact["email"]
 
         valid_businesses.append({
             "name": business_name,
             "email": email,
             "phone": biz.get("phone", ""),
             "domain": domain,
+            "type": contact["type"],
         })
 
-        logger.info(f"       BULUNDU: {business_name} - {email}")
+        logger.info(f"       BULUNDU: {business_name} - {email} [{contact['type']}]")
 
     # 5. Ozet
     logger.info(f"\n{'='*60}")

@@ -16,7 +16,7 @@ from scraper.maps_scraper import BusinessScraper
 from scraper.email_extractor import EmailExtractor
 from sheets.sheets_manager import SheetsManager
 from sheets.leads_manager import LeadsManager
-from utils.filters import extract_domain_from_url
+from utils.filters import extract_domain_from_url, is_aggregator_website
 from utils.domain_parser import domain_to_business_name
 
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
@@ -347,6 +347,11 @@ def run_scan(sector: str, city: str, min_results: int):
             if not website:
                 continue
 
+            # Aggregator/sosyal medya sitelerini atla (sahibinden, instagram vb.)
+            if is_aggregator_website(website):
+                add_log(f"[{i}/{scan_state['total']}] Aggregator/sosyal site atlandı: {website}")
+                continue
+
             domain = extract_domain_from_url(website)
 
             if sheets.is_duplicate(domain):
@@ -356,9 +361,9 @@ def run_scan(sector: str, city: str, min_results: int):
             scan_state["status"] = f"[{i}/{scan_state['total']}] {domain} taranıyor... ({len(valid_businesses)}/{min_results} e-posta bulundu)"
             add_log(f"[{i}/{scan_state['total']}] {domain} taranıyor...")
 
-            emails = extractor.extract_emails_from_url(website)
-            if not emails:
-                add_log(f"  → Kurumsal e-posta bulunamadı.")
+            contact = extractor.extract_contact_email(website)
+            if not contact["email"]:
+                add_log(f"  → E-posta bulunamadı.")
                 continue
 
             # Firma adini belirle (3 asamali):
@@ -382,7 +387,8 @@ def run_scan(sector: str, city: str, min_results: int):
 
             # En iyi adi sec: Google Places > Site Title > Domain
             business_name = maps_name or site_title or domain_name
-            email = emails[0]
+            email = contact["email"]
+            email_type = contact["type"]
 
             # Sosyal medya linklerini cikar
             social = extractor.extract_social_links(website)
@@ -399,10 +405,11 @@ def run_scan(sector: str, city: str, min_results: int):
                 "instagram": social.get("instagram", ""),
                 "facebook": social.get("facebook", ""),
                 "linkedin": social.get("linkedin", ""),
+                "type": email_type,
             }
             valid_businesses.append(result)
             scan_state["results"].append(result)
-            add_log(f"  → BULUNDU: {business_name} - {email}")
+            add_log(f"  → BULUNDU: {business_name} - {email} [{email_type}]")
 
         # 4. Sheets'e kaydet
         if valid_businesses:
@@ -419,8 +426,8 @@ def run_scan(sector: str, city: str, min_results: int):
             scan_state["status"] = f"Tamamlandı! {len(scan_state['results'])} işletme bulundu (hepsi zaten kayıtlı)."
             add_log(f"{len(scan_state['results'])} işletme bulundu ama hepsi zaten Google Sheets'te kayıtlı.")
         else:
-            scan_state["status"] = "Tamamlandı - Bu arama için kurumsal e-posta bulunamadı."
-            add_log("Kurumsal e-posta bulunamadı.")
+            scan_state["status"] = "Tamamlandı - Bu arama için e-posta bulunamadı."
+            add_log("E-posta bulunamadı.")
 
         # Playwright tarayicisini kapat
         extractor.close()

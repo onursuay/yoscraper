@@ -25,6 +25,41 @@ EMAIL_REGEX = re.compile(
 # Gecersiz uzantilar
 INVALID_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".pdf", ".zip", ".css", ".js"}
 
+# Gurultu e-posta domainleri (analitik/takip/placeholder - gercek mail degil)
+NOISE_EMAIL_DOMAINS = {
+    "sentry.wixpress.com", "sentry-next.wixpress.com", "sentry.io",
+    "mhtml.blink", "wix.com", "wixpress.com",
+    "example.com", "example.org", "example.net", "domain.com",
+    "yourdomain.com", "yourcompany.com", "email.com", "test.com",
+    "sentry.local", "godaddy.com", "wordpress.com", "wp.com",
+}
+# Gurultu domain son ekleri
+NOISE_TLD_SUFFIXES = (".blink", ".local", ".invalid", ".test", ".example")
+# Takip ID'si gibi gorunen local part (uzun hex dizisi)
+_HEX_RUN_RE = re.compile(r"[0-9a-f]{20,}", re.IGNORECASE)
+
+# Iletisim sayfasi linklerini tespit icin anahtar kelimeler
+CONTACT_LINK_KEYWORDS = [
+    "iletisim", "iletişim", "contact", "bize-ulas", "bizeulas",
+    "ulasin", "ulaşın", "hakkimizda", "hakkımızda", "about", "kurumsal",
+]
+
+# Bracket'li obfuscation: "info [at] firma [dot] com" -> "info@firma.com"
+_OBF_AT = re.compile(r"\s*[\[\(]\s*at\s*[\]\)]\s*", re.IGNORECASE)
+_OBF_DOT = re.compile(r"\s*[\[\(]\s*(?:dot|nokta)\s*[\]\)]\s*", re.IGNORECASE)
+
+
+def decode_cfemail(hex_str: str) -> str:
+    """Cloudflare email-protection hex stringini coz (XOR ilk byte = anahtar)."""
+    try:
+        data = bytes.fromhex(hex_str.strip())
+        if len(data) < 2:
+            return ""
+        key = data[0]
+        return "".join(chr(b ^ key) for b in data[1:])
+    except (ValueError, IndexError):
+        return ""
+
 
 class EmailExtractor:
     """Web sitelerinden kurumsal e-posta adresi cikaran sinif.
@@ -54,69 +89,98 @@ class EmailExtractor:
     # Standart kurumsal e-posta onekleri
     COMMON_PREFIXES = ["info", "iletisim", "bilgi", "contact", "admin", "destek", "satis", "hizmet"]
 
-    def extract_emails_from_url(self, url: str) -> list:
-        """Verilen URL'den kurumsal e-posta adreslerini cikar.
+    @staticmethod
+    def _classify(email: str) -> str:
+        """E-posta tipini belirle: kurumsal mi kisisel mi."""
+        return "kurumsal" if is_valid_corporate_email(email) else "kişisel"
 
-        3 asamali strateji:
-        1. Web sitesinden cikar (requests - hizli)
-        2. Web sitesinden cikar (Firecrawl - JS render, CAPTCHA/Cloudflare bypass)
-        3. Domain'den tahmin et (MX kaydi kontrolu ile)
+    @staticmethod
+    def _best_emails(emails: set) -> list:
+        """E-postalari oncelige gore sirala: once kurumsal, sonra kisisel."""
+        corporate = sorted(e for e in emails if is_valid_corporate_email(e))
+        personal = sorted(e for e in emails if not is_valid_corporate_email(e))
+        return corporate + personal
+
+    def extract_contact_email(self, url: str) -> dict:
+        """Verilen URL'den en iyi iletisim e-postasini ve TIPINI cikar.
+
+        Strateji (kurumsal > kisisel > tahmin):
+        1. Requests ile sitedeki TUM gercek e-postalari topla (kurumsal+kisisel)
+        2. Bulamazsa Firecrawl (JS render, CAPTCHA/Cloudflare bypass)
+        3. Hala yoksa domain MX kaydindan info@domain tahmin et
+
+        Returns:
+            {"email": str, "type": "kurumsal"|"kişisel"|"tahmin"|"", "all": list}
         """
+        empty = {"email": "", "type": "", "all": []}
         if not url:
-            return []
-
+            return empty
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
 
-        # 1. Requests ile dene (hizli yol)
-        emails = self._extract_with_requests(url)
-        if emails:
-            return emails
+        # 1. Requests (hizli yol) - tum gercek e-postalari topla
+        found = self._collect_emails_requests(url)
 
-        # 2. Firecrawl ile dene (JS render, CAPTCHA/Cloudflare bypass)
-        if FIRECRAWL_API_KEY:
-            emails = self._extract_with_firecrawl(url)
-            if emails:
-                return emails
+        # 2. Requests'te KURUMSAL yoksa Firecrawl dene (JS/Cloudflare siteleri)
+        if FIRECRAWL_API_KEY and not any(is_valid_corporate_email(e) for e in found):
+            fc = self._collect_emails_firecrawl(url)
+            if fc:
+                found |= fc
 
-        # 3. Domain'den standart e-posta tahmin et (MX kontrolu ile)
-        emails = self._guess_email_from_domain(url)
-        return emails
+        if found:
+            ordered = self._best_emails(found)
+            best = ordered[0]
+            return {"email": best, "type": self._classify(best), "all": ordered}
 
-    def _extract_with_firecrawl(self, url: str) -> list:
-        """Firecrawl API ile e-posta cikar (JS render + CAPTCHA bypass).
+        # 3. Son care: domain MX kaydindan tahmin (dusuk kalite)
+        guessed = self._guess_email_from_domain(url)
+        if guessed:
+            return {"email": guessed[0], "type": "tahmin", "all": guessed}
 
-        Ana sayfa ve iletisim sayfalarini tarar.
+        return empty
+
+    def extract_emails_from_url(self, url: str) -> list:
+        """Geriye donuk uyumluluk: e-posta listesini dondur (en iyi ilk sirada)."""
+        return self.extract_contact_email(url)["all"]
+
+    def _collect_emails_firecrawl(self, url: str) -> set:
+        """Firecrawl API (v4) ile sitedeki tum e-postalari topla.
+
+        Ana sayfayi tarar, oradaki iletisim linklerini takip eder.
+        Kurumsal e-posta bulununca erken durur.
         """
         try:
-            from firecrawl import FirecrawlApp
-            app = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
+            from firecrawl import Firecrawl
+            app = Firecrawl(api_key=FIRECRAWL_API_KEY)
         except ImportError:
             logger.warning("firecrawl-py yuklu degil: pip install firecrawl-py")
-            return []
+            return set()
 
-        found_emails = set()
-        pages_to_try = [url] + [
-            url.rstrip("/") + "/" + p.lstrip("/")
-            for p in CONTACT_PAGES[:3]
-        ]
-
-        for page_url in pages_to_try:
+        def _scrape(u: str):
             try:
-                result = app.scrape_url(page_url, formats=["html"])
-                html = getattr(result, "html", None) or (result.get("html") if isinstance(result, dict) else None)
-                if html:
-                    emails = self._extract_emails_from_html(html)
-                    found_emails.update(emails)
-                    corporate = [e for e in found_emails if is_valid_corporate_email(e)]
-                    if corporate:
-                        logger.info(f"  Firecrawl ile {len(corporate)} e-posta bulundu: {page_url}")
-                        return corporate
+                doc = app.scrape(u, formats=["html"], timeout=30000)
+                return getattr(doc, "html", None) or (doc.get("html") if isinstance(doc, dict) else None)
             except Exception as e:
-                logger.debug(f"  Firecrawl hata ({page_url}): {e}")
-                continue
+                logger.debug(f"  Firecrawl hata ({u}): {e}")
+                return None
 
-        return [e for e in found_emails if is_valid_corporate_email(e)]
+        found = set()
+        home_html = _scrape(url)
+        if home_html:
+            found |= self._extract_emails_from_html(home_html)
+            if any(is_valid_corporate_email(e) for e in found):
+                logger.info(f"  Firecrawl ile kurumsal e-posta bulundu: {url}")
+                return found
+
+        for page_url in self._discover_contact_pages(url, home_html)[:3]:
+            html = _scrape(page_url)
+            if html:
+                found |= self._extract_emails_from_html(html)
+                if any(is_valid_corporate_email(e) for e in found):
+                    logger.info(f"  Firecrawl ile kurumsal e-posta bulundu: {page_url}")
+                    return found
+
+        return found
 
     def _guess_email_from_domain(self, url: str) -> list:
         """Domain'in MX kaydi varsa standart e-posta adresleri olustur.
@@ -150,55 +214,94 @@ class EmailExtractor:
         except Exception:
             return False
 
-    def _extract_with_requests(self, url: str) -> list:
-        """Requests + BeautifulSoup ile e-posta cikar (statik HTML)."""
-        found_emails = set()
+    def _collect_emails_requests(self, url: str) -> set:
+        """Requests + BeautifulSoup ile sitedeki TUM gercek e-postalari topla.
+
+        Ana sayfayi cektikten sonra oradaki gercek "Iletisim" linklerini
+        takip eder (sabit liste sadece yedek). Kurumsal bulununca erken durur.
+        """
+        found = set()
 
         # Ana sayfa
-        emails = self._scrape_page_requests(url)
-        found_emails.update(emails)
+        home_html = self._get_html(url)
+        if home_html:
+            found |= self._extract_emails_from_html(home_html)
+            if any(is_valid_corporate_email(e) for e in found):
+                return found
 
-        corporate = [e for e in found_emails if is_valid_corporate_email(e)]
-        if corporate:
-            return corporate
+        # Iletisim/hakkimizda sayfalari (once sayfadaki gercek linkler)
+        for page_url in self._discover_contact_pages(url, home_html):
+            html = self._get_html(page_url)
+            if html:
+                found |= self._extract_emails_from_html(html)
+                if any(is_valid_corporate_email(e) for e in found):
+                    return found
 
-        # Iletisim sayfalari
-        for page_path in CONTACT_PAGES[:4]:  # Ilk 4 sayfayi dene
+        return found
+
+    def _discover_contact_pages(self, base_url: str, home_html: str) -> list:
+        """Iletisim sayfasi URL'lerini bul: once ana sayfadaki gercek linkler,
+        sonra sabit yedek listesi (config.CONTACT_PAGES)."""
+        urls = []
+        seen = set()
+        base = base_url.rstrip("/") + "/"
+
+        # 1. Ana sayfadaki gercek iletisim linklerini takip et
+        if home_html:
             try:
-                page_url = urljoin(url.rstrip("/") + "/", page_path.lstrip("/"))
-                emails = self._scrape_page_requests(page_url)
-                found_emails.update(emails)
-                corporate = [e for e in found_emails if is_valid_corporate_email(e)]
-                if corporate:
-                    return corporate
+                soup = BeautifulSoup(home_html, "html.parser")
+                for a_tag in soup.find_all("a", href=True):
+                    href = a_tag["href"].strip()
+                    text = (a_tag.get_text() or "").lower()
+                    hl = href.lower()
+                    if any(k in hl or k in text for k in CONTACT_LINK_KEYWORDS):
+                        full = urljoin(base, href)
+                        if full.startswith(("http://", "https://")) and full not in seen:
+                            seen.add(full)
+                            urls.append(full)
             except Exception:
-                continue
+                pass
 
-        return [e for e in found_emails if is_valid_corporate_email(e)]
+        # 2. Sabit yedek liste
+        for page_path in CONTACT_PAGES:
+            full = urljoin(base, page_path.lstrip("/"))
+            if full not in seen:
+                seen.add(full)
+                urls.append(full)
 
-    def _scrape_page_requests(self, url: str) -> set:
-        """Requests ile tek bir sayfadan e-posta cikar."""
-        emails = set()
+        return urls[:8]  # Asiri sayfa cekmeyi sinirlandir
+
+    def _get_html(self, url: str) -> str:
+        """Requests ile tek bir sayfanin HTML'ini getir (yoksa bos string)."""
         try:
             response = self.session.get(url, timeout=WEBSITE_TIMEOUT, verify=False)
             if response.status_code != 200:
-                return emails
+                return ""
             content_type = response.headers.get("content-type", "")
             if "text/html" not in content_type and "text/plain" not in content_type:
-                return emails
-            return self._extract_emails_from_html(response.text)
+                return ""
+            return response.text or ""
         except Exception:
-            return emails
+            return ""
 
     def _extract_emails_from_html(self, html: str) -> set:
-        """HTML iceriginden e-posta adreslerini cikar."""
+        """HTML iceriginden e-posta adreslerini cikar.
+
+        Kaynaklar: duz metin regex, mailto: linkleri, Cloudflare
+        email-protection (data-cfemail) decode ve bracket'li obfuscation
+        ("info [at] firma [dot] com").
+        """
         emails = set()
+        if not html:
+            return emails
 
-        # Regex ile bul
-        raw_emails = EMAIL_REGEX.findall(html)
+        # 1. Bracket'li obfuscation'i once cozup duz metin regex calistir
+        deobf = _OBF_DOT.sub(".", _OBF_AT.sub("@", html))
+        raw_emails = EMAIL_REGEX.findall(deobf)
 
-        # mailto: linklerinden de cikar
         soup = BeautifulSoup(html, "html.parser")
+
+        # 2. mailto: linklerinden cikar
         for a_tag in soup.find_all("a", href=True):
             href = a_tag["href"]
             if href.startswith("mailto:"):
@@ -206,15 +309,54 @@ class EmailExtractor:
                 if email:
                     raw_emails.append(email)
 
+        # 3. Cloudflare email-protection decode
+        #    a) data-cfemail attribute'lu elementler
+        for el in soup.select("[data-cfemail]"):
+            decoded = decode_cfemail(el.get("data-cfemail", ""))
+            if decoded:
+                raw_emails.append(decoded)
+        #    b) /cdn-cgi/l/email-protection#<hex> linkleri
+        for a_tag in soup.find_all("a", href=True):
+            href = a_tag["href"]
+            if "/cdn-cgi/l/email-protection#" in href:
+                decoded = decode_cfemail(href.split("#", 1)[1])
+                if decoded:
+                    raw_emails.append(decoded)
+
         # Filtrele
         for email in raw_emails:
             email = email.lower().strip().rstrip(".")
+            # Bozuk lider/artik "@" temizle (or. "@info@x.com" -> "info@x.com")
+            email = email.strip("@")
+            # E-posta domaininde gereksiz "www." onekini temizle (info@www.x.com -> info@x.com)
+            if "@www." in email:
+                email = email.replace("@www.", "@", 1)
+            # Tam olarak tek "@" olmali (cift @ = bozuk)
+            if email.count("@") != 1:
+                continue
             if any(email.endswith(ext) for ext in INVALID_EXTENSIONS):
+                continue
+            if self._is_noise_email(email):
                 continue
             if self._is_plausible_email(email):
                 emails.add(email)
 
         return emails
+
+    @staticmethod
+    def _is_noise_email(email: str) -> bool:
+        """Analitik/takip/placeholder e-postalarini ele (sentry, mhtml, example vb.)."""
+        if "@" not in email:
+            return True
+        local, domain = email.rsplit("@", 1)
+        if domain in NOISE_EMAIL_DOMAINS:
+            return True
+        if domain.endswith(NOISE_TLD_SUFFIXES):
+            return True
+        # Takip ID'si gibi uzun hex local part (or. 2062d0a4...@..., frame-0a2d...@...)
+        if _HEX_RUN_RE.search(local):
+            return True
+        return False
 
     def extract_site_title(self, url: str) -> str:
         """Web sitesinin <title> etiketinden firma adini cikar."""
@@ -296,7 +438,7 @@ class EmailExtractor:
     @staticmethod
     def _is_plausible_email(email: str) -> bool:
         """E-posta adresinin makul olup olmadigini kontrol et."""
-        if not email or "@" not in email:
+        if not email or email.count("@") != 1:
             return False
         local, domain = email.rsplit("@", 1)
         if not local or not domain:

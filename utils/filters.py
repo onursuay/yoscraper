@@ -4,6 +4,7 @@ from config import (
     BLOCKED_DOMAIN_SUFFIXES,
     BLOCKED_DOMAIN_KEYWORDS,
     BLOCKED_EMAIL_PREFIXES,
+    BLOCKED_WEBSITE_DOMAINS,
 )
 
 
@@ -45,3 +46,18 @@ def extract_domain_from_url(url: str) -> str:
     if extracted.suffix:
         return f"{extracted.domain}.{extracted.suffix}"
     return extracted.domain
+
+
+def is_aggregator_website(url: str) -> bool:
+    """URL bir aggregator / pazaryeri / sosyal medya sitesi mi?
+
+    Google Places "website" alaninda isletmenin kendi sitesi yerine
+    sahibinden.com, instagram.com gibi adresler donebiliyor. Bunlar gercek
+    isletme sitesi degildir - e-posta cikarmaya calismak copyem lead uretir.
+    """
+    if not url:
+        return False
+    domain = extract_domain_from_url(url).lower().strip()
+    if not domain:
+        return False
+    return domain in BLOCKED_WEBSITE_DOMAINS

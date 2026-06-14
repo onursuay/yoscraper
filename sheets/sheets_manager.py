@@ -61,14 +61,33 @@ class SheetsManager:
             raise FileNotFoundError(msg)
 
     def _ensure_headers(self):
-        """Ilk satirdaki basliklari kontrol et, yoksa ekle."""
+        """Ilk satirdaki basliklari kontrol et, yoksa/eksikse ekle.
+
+        Mevcut sayfalarda yeni eklenen sutunlar (or. 'Tip') icin de basligi
+        gunceller (first_row sutun sayisi SHEET_COLUMNS'tan azsa).
+        """
         try:
             first_row = self.worksheet.row_values(1)
-            if not first_row or first_row[0] != SHEET_COLUMNS[0]:
-                self.worksheet.update("A1:J1", [SHEET_COLUMNS])
-                logger.info("Basliklar eklendi.")
+            need_update = (
+                not first_row
+                or first_row[0] != SHEET_COLUMNS[0]
+                or len(first_row) < len(SHEET_COLUMNS)
+            )
+            if need_update:
+                last_col = self._col_letter(len(SHEET_COLUMNS))
+                self.worksheet.update(f"A1:{last_col}1", [SHEET_COLUMNS])
+                logger.info("Basliklar eklendi/guncellendi.")
         except Exception as e:
             logger.warning(f"Baslik kontrolunde hata: {e}")
+
+    @staticmethod
+    def _col_letter(n: int) -> str:
+        """1-tabanli sutun numarasini harfe cevir (1->A, 11->K, 27->AA)."""
+        result = ""
+        while n > 0:
+            n, rem = divmod(n - 1, 26)
+            result = chr(65 + rem) + result
+        return result
 
     def _load_existing_domains(self):
         """Mevcut domainleri yukle (F sutunu - Domain)."""
@@ -117,6 +136,7 @@ class SheetsManager:
                 biz.get("instagram", ""),
                 biz.get("facebook", ""),
                 biz.get("linkedin", ""),
+                biz.get("type", ""),
             ])
             self.existing_domains.add(domain)
 

@@ -4,6 +4,7 @@ import time
 import requests
 
 from config import MIN_RESULTS
+from utils.filters import is_aggregator_website
 
 logger = logging.getLogger(__name__)
 
@@ -94,12 +95,18 @@ class BusinessScraper:
 
             details = self._get_place_details(biz["place_id"])
             if details and details.get("website"):
-                results.append({
-                    "maps_name": biz["name"],
-                    "website": details["website"],
-                    "phone": details.get("phone", ""),
-                })
-                logger.info(f"    -> Web sitesi bulundu ({len(results)}/{min_results})")
+                website = details["website"]
+                # Aggregator/pazaryeri/sosyal medya sitelerini atla (gercek isletme sitesi degil).
+                # Web sitesi yokmus gibi davranip siradaki isletmeye gec -> butce israfi olmaz.
+                if is_aggregator_website(website):
+                    logger.info(f"    -> Aggregator/sosyal site atlandı: {website}")
+                else:
+                    results.append({
+                        "maps_name": biz["name"],
+                        "website": website,
+                        "phone": details.get("phone", ""),
+                    })
+                    logger.info(f"    -> Web sitesi bulundu ({len(results)}/{min_results})")
 
             time.sleep(0.2)
 
